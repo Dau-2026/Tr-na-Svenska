@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Svenska Ord - B1/C1 Masterclass</title>
+    <style>
+        :root {
+            --primary: #2c3e50; 
+            --secondary: #1abc9c; 
+            --accent: #f39c12;
+            --bg-color: #ecf0f1;
+            --text-color: #34495e;
+            --card-bg: #ffffff;
+            --success: #27ae60;
+            --danger: #c0392b;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: var(--card-bg);
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            padding: 35px;
+            width: 100%;
+            max-width: 650px;
+            text-align: center;
+        }
+        h1 {
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+        p.subtitle {
+            color: #7f8c8d;
+            font-size: 1em;
+            margin-bottom: 30px;
+        }
+        /* Meny */
+        .menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .menu-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 20px;
+            font-size: 1.2em;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+        .menu-btn:hover {
+            background-color: #34495e;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .menu-btn.accent {
+            background-color: var(--secondary);
+        }
+        .menu-btn.accent:hover {
+            background-color: #16a085;
+        }
+        
+        /* Spelyta */
+        #game-screen {
+            display: none;
+        }
+        .flashcard {
+            background: linear-gradient(135deg, var(--primary), #34495e);
+            color: white;
+            padding: 40px 20px;
+            border-radius: 12px;
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(44, 62, 80, 0.3);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+        }
+        
+        /* Flerval */
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        button.option-btn {
+            background-color: var(--bg-color);
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-color);
+            font-weight: 500;
+        }
+        button.option-btn:hover:not(:disabled) {
+            border-color: var(--secondary);
+            background-color: #e8f8f5;
+        }
+        
+        /* Skrivutmaning */
+        .typing-area {
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .typing-area input {
+            padding: 15px;
+            font-size: 1.2em;
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .typing-area input:focus {
+            outline: none;
+            border-color: var(--secondary);
+        }
+        .submit-btn {
+            background-color: var(--secondary);
+            color: white;
+            border: none;
+            padding: 15px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .feedback-text {
+            font-size: 1.2em;
+            font-weight: bold;
+            min-height: 30px;
+            margin-bottom: 15px;
+        }
+
+        /* Allmänt */
+        .correct {
+            background-color: var(--success) !important;
+            color: white !important;
+            border-color: var(--success) !important;
+        }
+        .wrong {
+            background-color: var(--danger) !important;
+            color: white !important;
+            border-color: var(--danger) !important;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #bdc3c7;
+        }
+        .missed-words-section {
+            margin-top: 30px;
+            text-align: left;
+            display: none;
+            background-color: #fcf3cf;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 5px solid var(--accent);
+        }
+        #next-btn {
+            background-color: var(--accent);
+            color: #fff;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            display: none;
+            margin: 0 auto;
+        }
+        .home-btn {
+            background: none;
+            border: none;
+            color: var(--primary);
+            text-decoration: underline;
+            cursor: pointer;
+            margin-bottom: 10px;
+            font-size: 1em;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <!-- Startmeny -->
+    <div id="start-screen">
+        <h1>Svenska Ord B1-C1</h1>
+        <p class="subtitle">Välj hur du vill träna idag</p>
+        <div class="menu-buttons">
+            <button class="menu-btn" onclick="startMode('flerval')">1. Flerval (Klassisk)</button>
+            <button class="menu-btn accent" onclick="startMode('skriv')">2. Skrivutmaning (Stavning & Minne)</button>
+            <button class="menu-btn" onclick="startMode('idiom')">3. Partikelverb & Idiom (Flerval)</button>
+        </div>
+    </div>
+
+    <!-- Spelyta -->
+    <div id="game-screen">
+        <button class="home-btn" onclick="location.reload()">← Tillbaka till menyn</button>
+        <h2 id="mode-title" style="color: var(--secondary); margin-top:0;">Läge</h2>
+        
+        <div class="flashcard" id="word-display">Laddar...</div>
+        
+        <!-- Yta för flerval -->
+        <div class="options-grid" id="options-container"></div>
+        
+        <!-- Yta för skrivutmaning -->
+        <div class="typing-area" id="typing-container">
+            <input type="text" id="answer-input" placeholder="Skriv det svenska ordet..." autocomplete="off">
+            <button class="submit-btn" id="submit-typing-btn" onclick="checkTypedAnswer()">Svara</button>
+            <div class="feedback-text" id="typing-feedback"></div>
+        </div>
+        
+        <button id="next-btn" onclick="nextQuestion()">Nästa ord ➔</button>
+        
+        <div class="stats">
+            <span>Framsteg: <span id="progress-text">0</span></span>
+            <span>Poäng: <span id="score-text">0</span></span>
+        </div>
+
+        <div class="missed-words-section" id="missed-section">
+            <h3 style="color: #d35400; margin-top:0;">Ord att repetera:</h3>
+            <ul id="missed-list" style="color: #d35400; padding-left: 20px;"></ul>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Ordbank 1: Svåra ord och stavningsfällor (används i läge 1 och 2)
+    const advancedWords = [
+        {sv: "Noggrann", ru: "Тщательный / Аккуратный"},
+        {sv: "Tillräckligt", ru: "Достаточно"},
+        {sv: "Självständig", ru: "Независимый / Самостоятельный"},
+        {sv: "Förutsättning", ru: "Предпосылка / Условие"},
+        {sv: "Åtminstone", ru: "По крайней мере"},
+        {sv: "Verklighet", ru: "Реальность"},
+        {sv: "Tillfredsställande", ru: "Удовлетворительный"},
+        {sv: "Egentligen", ru: "На самом деле"},
+        {sv: "Nyfikenhet", ru: "Любопытство"},
+        {sv: "Överraskning", ru: "Сюрприз"},
+        {sv: "Gemenskap", ru: "Общность"},
+        {sv: "Sammanhang", ru: "Контекст / Связь"},
+        {sv: "Förväntning", ru: "Ожидание"},
+        {sv: "Arbetsplats", ru: "Рабочее место"},
+        {sv: "Upplevelse", ru: "Впечатление / Опыт (пережитый)"},
+        {sv: "Utmaning", ru: "Вызов (челлендж)"},
+        {sv: "Tålamod", ru: "Терпение"},
+        {sv: "Påtaglig", ru: "Ощутимый / Заметный"},
+        {sv: "Åtgärd", ru: "Мера / Действие (для решения проблемы)"},
+        {sv: "Beslutsfattande", ru: "Принятие решений"},
+        {sv: "Bekräftelse", ru: "Подтверждение / Одобрение"},
+        {sv: "Tillvägagångssätt", ru: "Метод / Подход"},
+        {sv: "Omedveten", ru: "Неосознанный / Бессознательный"},
+        {sv: "Målsättning", ru: "Постановка целей"},
+        {sv: "Företeelse", ru: "Явление"}
+    ];
+
+    // Ordbank 2: Partikelverb & Idiom (används i läge 3)
+    const idiomWords = [
+        {sv: "Sätta sig in i", ru: "Вникнуть в / Ознакомиться с"},
+        {sv: "Komma på", ru: "Придумать / Вспомнить"},
+        {sv: "Gå med på", ru: "Согласиться на"},
+        {sv: "Stöta på", ru: "Натолкнуться на / Случайно встретить"},
+        {sv: "Reda ut", ru: "Разобраться / Выяснить"},
+        {sv: "Slå fast", ru: "Установить / Констатировать"},
+        {sv: "Ta för givet", ru: "Принимать как должное"},
+        {sv: "Ha is i magen", ru: "Сохранять хладнокровие"},
+        {sv: "Skjuta upp", ru: "Откладывать (во времени)"},
+        {sv: "Dra sig ur", ru: "Выйти из игры / Отказаться от участия"},
+        {sv: "Hålla hus", ru: "Находиться / Пропадать (где ты пропадаешь?)"},
+        {sv: "Lägga märke till", ru: "Заметить / Обратить внимание"},
+        {sv: "Se fram emot", ru: "Ждать с нетерпением"},
+        {sv: "Ställa upp", ru: "Выручить / Принять участие"},
+        {sv: "Säga ifrån", ru: "Дать отпор / Возразить"},
+        {sv: "Ligga i", ru: "Усердно работать / Стараться"},
+        {sv: "Släppa taget", ru: "Отпустить (ситуацию)"},
+        {sv: "Bita i det sura äpplet", ru: "Смириться с неизбежным / Проглотить пилюлю"},
+        {sv: "Känna på sig", ru: "Предчувствовать"},
+        {sv: "Hålla med", ru: "Соглашаться (с мнением)"}
+    ];
+
+    let currentQuestions = [];
+    let currentIndex = 0;
+    let score = 0;
+    let missedWords = [];
+    let currentCorrectAnswer = "";
+    let currentWordObj = null;
+    let currentMode = '';
+
+    function shuffle(array) {
+        let currentIndex = array.length, randomIndex;
+        while (currentIndex !== 0) {
+            randomIndex = Math.floor(Math.random() * currentIndex);
+            currentIndex--;
+            [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+        }
+        return array;
+    }
+
+    // Starta specifikt läge
+    function startMode(mode) {
+        currentMode = mode;
+        document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('game-screen').style.display = 'block';
+        
+        currentIndex = 0;
+        score = 0;
+        missedWords = [];
+        
+        if(mode === 'flerval') {
+            document.getElementById('mode-title').innerText = "Läge 1: Flerval (Klassisk)";
+            currentQuestions = shuffle([...advancedWords]);
+            document.getElementById('options-container').style.display = 'grid';
+            document.getElementById('typing-container').style.display = 'none';
+        } 
+        else if(mode === 'skriv') {
+            document.getElementById('mode-title').innerText = "Läge 2: Skrivutmaning";
+            currentQuestions = shuffle([...advancedWords]);
+            document.getElementById('options-container').style.display = 'none';
+            document.getElementById('typing-container').style.display = 'flex';
+        }
+        else if(mode === 'idiom') {
+            document.getElementById('mode-title').innerText = "Läge 3: Partikelverb & Idiom";
+            currentQuestions = shuffle([...idiomWords]);
+            document.getElementById('options-container').style.display = 'grid';
+            document.getElementById('typing-container').style.display = 'none';
+        }
+
+        updateUI();
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        if (currentIndex >= currentQuestions.length) {
+            endGame();
+            return;
+        }
+
+        currentWordObj = currentQuestions[currentIndex];
+        document.getElementById('next-btn').style.display = 'none';
+
+        if(currentMode === 'flerval' || currentMode === 'idiom') {
+            // Visar svenska, gissa ryska
+            document.getElementById('word-display').innerText = currentWordObj.sv;
+            currentCorrectAnswer = currentWordObj.ru;
+            generateMultipleChoice(currentMode === 'flerval' ? advancedWords : idiomWords);
+        } else if (currentMode === 'skriv') {
+            // Visar ryska, skriv in svenska
+            document.getElementById('word-display').innerText = currentWordObj.ru;
+            currentCorrectAnswer = currentWordObj.sv;
+            document.getElementById('answer-input').value = "";
+            document.getElementById('answer-input').disabled = false;
+            document.getElementById('submit-typing-btn').disabled = false;
+            document.getElementById('typing-feedback').innerText = "";
+            document.getElementById('typing-feedback').className = "feedback-text";
+            document.getElementById('answer-input').focus();
+        }
+    }
+
+    function generateMultipleChoice(wordBank) {
+        let options = [currentCorrectAnswer];
+        let availableWords = wordBank.filter(w => w.ru !== currentCorrectAnswer);
+        availableWords = shuffle(availableWords);
+        
+        for (let i = 0; i < 3; i++) {
+            if(availableWords[i]) options.push(availableWords[i].ru);
+        }
+        options = shuffle(options);
+
+        const container = document.getElementById('options-container');
+        container.innerHTML = "";
+        
+        options.forEach(option => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = option;
+            btn.onclick = () => checkMultipleChoice(btn, option);
+            container.appendChild(btn);
+        });
+    }
+
+    function checkMultipleChoice(btn, selected) {
+        const buttons = document.querySelectorAll('.option-btn');
+        buttons.forEach(b => b.disabled = true);
+
+        if (selected === currentCorrectAnswer) {
+            btn.classList.add('correct');
+            score++;
+        } else {
+            btn.classList.add('wrong');
+            buttons.forEach(b => {
+                if (b.innerText === currentCorrectAnswer) b.classList.add('correct');
+            });
+            addToMissed(currentWordObj);
+        }
+        document.getElementById('next-btn').style.display = 'block';
+        updateUI();
+    }
+
+    function checkTypedAnswer() {
+        const inputField = document.getElementById('answer-input');
+        const feedback = document.getElementById('typing-feedback');
+        const userAnswer = inputField.value.trim().toLowerCase();
+        const correctAnswer = currentCorrectAnswer.toLowerCase();
+
+        if (userAnswer === "") return;
+
+        inputField.disabled = true;
+        document.getElementById('submit-typing-btn').disabled = true;
+
+        if (userAnswer === correctAnswer) {
+            feedback.innerText = "Rätt!";
+            feedback.style.color = "var(--success)";
+            inputField.style.borderColor = "var(--success)";
+            score++;
+        } else {
+            feedback.innerText = `Fel. Rätt svar: ${currentCorrectAnswer}`;
+            feedback.style.color = "var(--danger)";
+            inputField.style.borderColor = "var(--danger)";
+            addToMissed(currentWordObj);
+        }
+
+        document.getElementById('next-btn').style.display = 'block';
+        updateUI();
+    }
+
+    // Möjliggör tryck på "Enter" i skrivläget
+    document.getElementById("answer-input").addEventListener("keypress", function(event) {
+        if (event.key === "Enter" && !this.disabled) {
+            event.preventDefault();
+            checkTypedAnswer();
+        }
+    });
+
+    function addToMissed(wordObj) {
+        if (!missedWords.find(w => w.sv === wordObj.sv)) {
+            missedWords.push(wordObj);
+            updateMissedList();
+        }
+    }
+
+    function nextQuestion() {
+        currentIndex++;
+        loadQuestion();
+        updateUI();
+    }
+
+    function updateUI() {
+        document.getElementById('score-text').innerText = score;
+        document.getElementById('progress-text').innerText = `${Math.min(currentIndex + 1, currentQuestions.length)}/${currentQuestions.length}`;
+    }
+
+    function updateMissedList() {
+        const section = document.getElementById('missed-section');
+        const list = document.getElementById('missed-list');
+        section.style.display = 'block';
+        list.innerHTML = "";
+        missedWords.forEach(word => {
+            const li = document.createElement('li');
+            li.innerHTML = `<strong>${word.sv}</strong> - ${word.ru}`;
+            list.appendChild(li);
+        });
+    }
+
+    function endGame() {
+        document.getElementById('word-display').innerText = "Bra jobbat!";
+        document.getElementById('options-container').innerHTML = "";
+        document.getElementById('typing-container').style.display = 'none';
+        
+        let endMessage = document.createElement('p');
+        endMessage.style.fontSize = "1.2em";
+        endMessage.innerText = `Du fick ${score} rätt av ${currentQuestions.length}.`;
+        document.getElementById('options-container').appendChild(endMessage);
+        document.getElementById('options-container').style.display = 'block';
+        
+        document.getElementById('next-btn').style.display = 'none';
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Svenska Master-App B2/C1</title>
+    <style>
+        :root {
+            --primary: #2980b9; 
+            --secondary: #27ae60; 
+            --accent: #f39c12;
+            --dark: #2c3e50;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --danger: #e74c3c;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--dark);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background-color: var(--card-bg);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 30px;
+            width: 100%;
+            max-width: 750px;
+            text-align: center;
+        }
+        h1 { color: var(--primary); margin-bottom: 5px; }
+        .subtitle { color: #7f8c8d; margin-bottom: 25px; }
+        
+        /* Menu */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .menu-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 15px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.3s;
+        }
+        .menu-btn:hover { background-color: #1a5276; transform: translateY(-2px); }
+        .menu-btn.full-width { grid-column: span 2; background-color: var(--dark); }
+        
+        /* Game Area */
+        #game-area { display: none; }
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+        .back-btn {
+            background: none; border: none; color: var(--primary);
+            cursor: pointer; font-size: 1em; text-decoration: underline;
+        }
+        
+        .question-box {
+            background: linear-gradient(135deg, var(--primary), var(--dark));
+            color: white;
+            padding: 30px 20px;
+            border-radius: 12px;
+            font-size: 1.6em;
+            font-weight: bold;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        /* Multiple Choice & Cloze */
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .option-btn {
+            background-color: var(--bg-color); border: 2px solid #bdc3c7;
+            padding: 15px; font-size: 1.1em; border-radius: 8px; cursor: pointer;
+            transition: all 0.2s; color: var(--dark); font-weight: 500;
+        }
+        .option-btn:hover:not(:disabled) { border-color: var(--primary); background-color: #eaf2f8; }
+        .correct { background-color: var(--secondary) !important; color: white !important; border-color: var(--secondary) !important; }
+        .wrong { background-color: var(--danger) !important; color: white !important; border-color: var(--danger) !important; }
+
+        /* Spelling */
+        .spelling-area { display: none; flex-direction: column; gap: 15px; }
+        .spelling-area input {
+            padding: 15px; font-size: 1.2em; border: 2px solid #bdc3c7;
+            border-radius: 8px; text-align: center;
+        }
+        
+        /* Sentence Builder */
+        .builder-area { display: none; flex-direction: column; gap: 20px; }
+        .answer-drop {
+            min-height: 50px; border: 2px dashed #bdc3c7; border-radius: 8px;
+            padding: 10px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+        }
+        .word-bank { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+        .word-piece {
+            background-color: #ecf0f1; border: 1px solid #bdc3c7; padding: 10px 15px;
+            border-radius: 6px; cursor: pointer; font-size: 1.1em;
+        }
+        .answer-drop .word-piece { background-color: var(--accent); color: white; border-color: #d68910; }
+
+        .action-btn {
+            background-color: var(--secondary); color: white; border: none;
+            padding: 12px 25px; font-size: 1.1em; border-radius: 8px;
+            cursor: pointer; font-weight: bold; margin-top: 15px;
+        }
+        
+        .feedback { font-size: 1.1em; font-weight: bold; min-height: 30px; margin-top: 15px; padding: 10px; border-radius: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Main Menu -->
+    <div id="menu-area">
+        <h1>Svenska Master-App</h1>
+        <p class="subtitle">Välj vad du vill träna idag</p>
+        
+        <div class="menu-grid">
+            <button class="menu-btn" onclick="startGame('sv-ru')">1. Ord: Svenska → Ryska</button>
+            <button class="menu-btn" onclick="startGame('ru-sv')">2. Ord: Ryska → Svenska</button>
+            <button class="menu-btn full-width" onclick="startGame('spell')">3. Rättstavning (Skriv in ordet)</button>
+            <button class="menu-btn" onclick="startGame('adj')">4. Adjektiv & Former</button>
+            <button class="menu-btn" onclick="startGame('idiom')">5. Partikelverb & Idiom</button>
+            <button class="menu-btn full-width" onclick="startGame('builder')">6. Meningsbyggaren (Ordföljd)</button>
+            <button class="menu-btn full-width" onclick="startGame('cloze')" style="background-color: var(--accent);">7. Fyll i luckorna (Kontext)</button>
+        </div>
+    </div>
+
+    <!-- Game Area -->
+    <div id="game-area">
+        <div class="top-bar">
+            <button class="back-btn" onclick="location.reload()">← Tillbaka till menyn</button>
+            <span style="font-weight: bold;">Poäng: <span id="score">0</span> | <span id="progress">0/0</span></span>
+        </div>
+        
+        <div class="question-box" id="question-text">Laddar...</div>
+        
+        <!-- Multiple Choice / Cloze -->
+        <div class="options-grid" id="options-area"></div>
+        
+        <!-- Spelling -->
+        <div class="spelling-area" id="spelling-area">
+            <input type="text" id="spell-input" placeholder="Skriv ordet här..." autocomplete="off">
+            <button class="action-btn" id="spell-submit" onclick="checkSpelling()">Svara</button>
+        </div>
+
+        <!-- Sentence Builder -->
+        <div class="builder-area" id="builder-area">
+            <div class="answer-drop" id="build-answer"></div>
+            <div class="word-bank" id="build-bank"></div>
+            <button class="action-btn" id="build-submit" onclick="checkBuilder()">Kontrollera ordföljd</button>
+        </div>
+
+        <div class="feedback" id="feedback-msg"></div>
+        <button class="action-btn" id="next-btn" style="display: none; margin: 15px auto 0;" onclick="nextQuestion()">Nästa ➔</button>
+    </div>
+</div>
+
+<script>
+    // --- DATABASER ---
+
+    // 1. Allmänna avancerade ord (Används i läge 1, 2, 3)
+    const vocab = [
+        {sv: "Företeelse", ru: "Явление / Феномен"},
+        {sv: "Övertyga", ru: "Убеждать"},
+        {sv: "Påtaglig", ru: "Ощутимый / Явный"},
+        {sv: "Utvärdera", ru: "Оценивать / Анализировать"},
+        {sv: "Sammanhang", ru: "Контекст / Связь"},
+        {sv: "Åtgärd", ru: "Мера / Действие"},
+        {sv: "Ifrågasätta", ru: "Ставить под сомнение"},
+        {sv: "Ursprunglig", ru: "Первоначальный"},
+        {sv: "Tillförlitlig", ru: "Надежный / Достоверный"},
+        {sv: "Förutsättning", ru: "Условие / Предпосылка"}
+    ];
+
+    // 2. Adjektiv (Används i läge 4)
+    const adjectives = [
+        { q: "Jag köpte ___ bordet igår.", options: ["det nya", "ett nytt", "nya", "ny"], ans: "det nya" },
+        { q: "Har du sett min ___ väska?", options: ["fina", "fin", "fint", "finaa"], ans: "fina" },
+        { q: "Vi bor i ett väldigt ___ hus.", options: ["stort", "stor", "stora", "storrt"], ans: "stort" },
+        { q: "De har tre ___ barn.", options: ["små", "lilla", "småa", "smått"], ans: "små" },
+        { q: "Han är en mycket ___ person.", options: ["trevlig", "trevligt", "trevliga", "trevligaste"], ans: "trevlig" },
+        { q: "Det var den ___ resan i mitt liv.", options: ["bästa", "bäst", "godaste", "bra"], ans: "bästa" },
+        { q: "Jag gillar ___ bilar.", options: ["snabba", "snabb", "snabbt", "snabbare"], ans: "snabba" },
+        { q: "Det är ett ___ problem.", options: ["allvarligt", "allvarlig", "allvarliga", "allvarligast"], ans: "allvarligt" }
+    ];
+
+    // 3. Avancerade Partikelverb & Idiom (Används i läge 5)
+    const idioms = [
+        {sv: "Gå miste om", ru: "Упустить (шанс/возможность)"},
+        {sv: "Finna sig i", ru: "Смириться с чем-либо"},
+        {sv: "Råka ut för", ru: "Столкнуться с (обычно плохим) / Подвергнуться"},
+        {sv: "Ställa till med", ru: "Натворить / Устроить (проблемы)"},
+        {sv: "Slå igenom", ru: "Прорваться / Стать успешным"},
+        {sv: "Ge upphov till", ru: "Породить / Послужить причиной"},
+        {sv: "Se mellan fingrarna", ru: "Смотреть сквозь пальцы (закрывать глаза на что-то)"},
+        {sv: "Sätta sig upp emot", ru: "Воспротивиться / Бунтовать против"},
+        {sv: "Få bukt med", ru: "Взять под контроль / Справиться с проблемой"},
+        {sv: "Bita i gräset", ru: "Потерпеть поражение / Умереть"}
+    ];
+
+    // 4. Meningar för ordföljd (Används i läge 6)
+    const sentences = [
+        { sv: "ju mer pengar man har desto mer kan man köpa", ru: "Чем больше денег у тебя есть, тем больше ты можешь купить." },
+        { sv: "det är viktigt att man inte glömmer sina mål", ru: "Важно, чтобы человек не забывал свои цели." },
+        { sv: "sverige och norge var i union fram till år 1905", ru: "Швеция и Норвегия были в унии до 1905 года." },
+        { sv: "trots att det regnade stannade vi hemma", ru: "Несмотря на то, что шел дождь, мы остались дома." },
+        { sv: "jag undrar vad man kallar det på svenska", ru: "Интересно, как это называется по-шведски." }
+    ];
+
+    // 5. Cloze / Luckor (Används i läge 7)
+    const cloze = [
+        { q: "Ju mer man dricker, ___ törstigare blir man.", options: ["desto", "för", "att", "som"], ans: "desto" },
+        { q: "Spegeln ___ om du tappar den i golvet.", options: ["spricker", "krympte", "bleknar", "försvinner"], ans: "spricker" },
+        { q: "Sveriges ___ semesterlag kom 1938.", options: ["första", "ett", "den", "först"], ans: "första" },
+        { q: "Jag frågade honom ___ han ville ha kaffe.", options: ["om", "att", "när", "som"], ans: "om" },
+        { q: "Vi ___ genomföra projektet nästa vecka.", options: ["kommer att", "ska att", "tänker till", "måste att"], ans: "kommer att" }
+    ];
+
+    // --- SPEL LOGIK ---
+    let currentMode = "";
+    let activeData = [];
+    let currentIndex = 0;
+    let score = 0;
+    
+    // För meningsbyggaren
+    let buildTarget = [];
+    let buildBank = [];
+    let buildSelected = [];
+
+    function shuffle(arr) { return arr.sort(() => Math.random() - 0.5); }
+
+    function startGame(mode) {
+        currentMode = mode;
+        document.getElementById('menu-area').style.display = 'none';
+        document.getElementById('game-area').style.display = 'block';
+        currentIndex = 0;
+        score = 0;
+
+        // Förbered data baserat på läge
+        if(mode === 'sv-ru' || mode === 'ru-sv' || mode === 'spell') activeData = shuffle([...vocab]);
+        else if(mode === 'adj') activeData = shuffle([...adjectives]);
+        else if(mode === 'idiom') activeData = shuffle([...idioms]);
+        else if(mode === 'builder') activeData = shuffle([...sentences]);
+        else if(mode === 'cloze') activeData = shuffle([...cloze]);
+
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        if(currentIndex >= activeData.length) {
+            endGame();
+            return;
+        }
+
+        updateStats();
+        resetUI();
+        let item = activeData[currentIndex];
+        let qText = document.getElementById('question-text');
+
+        // Hantera visning baserat på läge
+        if(currentMode === 'sv-ru') {
+            qText.innerText = item.sv;
+            renderMultipleChoice(item.ru, vocab.map(v => v.ru));
+        } 
+        else if(currentMode === 'ru-sv') {
+            qText.innerText = item.ru;
+            renderMultipleChoice(item.sv, vocab.map(v => v.sv));
+        }
+        else if(currentMode === 'idiom') {
+            qText.innerText = item.sv;
+            renderMultipleChoice(item.ru, idioms.map(v => v.ru));
+        }
+        else if(currentMode === 'adj' || currentMode === 'cloze') {
+            qText.innerHTML = item.q.replace("___", "<b>___</b>");
+            renderMultipleChoice(item.ans, item.options, true); // true = använd options direkt
+        }
+        else if(currentMode === 'spell') {
+            qText.innerText = item.ru;
+            document.getElementById('options-area').style.display = 'none';
+            document.getElementById('spelling-area').style.display = 'flex';
+            let inp = document.getElementById('spell-input');
+            inp.value = ""; inp.disabled = false; inp.focus();
+        }
+        else if(currentMode === 'builder') {
+            qText.innerText = item.ru;
+            document.getElementById('options-area').style.display = 'none';
+            document.getElementById('builder-area').style.display = 'flex';
+            setupBuilder(item.sv);
+        }
+    }
+
+    // --- MULTIPLE CHOICE LOGIK ---
+    function renderMultipleChoice(correctAnswer, allPossible, useProvidedOptions = false) {
+        document.getElementById('options-area').style.display = 'grid';
+        let options = [];
+        if(useProvidedOptions) {
+            options = [...allPossible];
+        } else {
+            options = [correctAnswer];
+            let distractors = allPossible.filter(w => w !== correctAnswer);
+            distractors = shuffle(distractors);
+            for(let i=0; i<3 && i<distractors.length; i++) options.push(distractors[i]);
+            options = shuffle(options);
+        }
+
+        const container = document.getElementById('options-area');
+        container.innerHTML = "";
+        options.forEach(opt => {
+            let btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = opt;
+            btn.onclick = () => checkMultipleChoice(btn, opt, correctAnswer);
+            container.appendChild(btn);
+        });
+    }
+
+    function checkMultipleChoice(btn, selected, correct) {
+        document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+        if(selected === correct) {
+            btn.classList.add('correct');
+            showFeedback("Rätt!", true);
+            score++;
+        } else {
+            btn.classList.add('wrong');
+            document.querySelectorAll('.option-btn').forEach(b => {
+                if(b.innerText === correct) b.classList.add('correct');
+            });
+            showFeedback("Fel! Rätt svar markerat.", false);
+        }
+        showNextBtn();
+    }
+
+    // --- SPELLING LOGIK ---
+    function checkSpelling() {
+        let inp = document.getElementById('spell-input');
+        let val = inp.value.trim().toLowerCase();
+        let correct = activeData[currentIndex].sv.toLowerCase();
+        
+        if(!val) return;
+        inp.disabled = true;
+
+        if(val === correct) {
+            inp.style.borderColor = "var(--secondary)";
+            showFeedback("Helt rätt!", true);
+            score++;
+        } else {
+            inp.style.borderColor = "var(--danger)";
+            showFeedback(`Fel. Rätt stavning: ${activeData[currentIndex].sv}`, false);
+        }
+        showNextBtn();
+    }
+    document.getElementById("spell-input").addEventListener("keypress", function(e) {
+        if(e.key === "Enter" && !this.disabled) checkSpelling();
+    });
+
+    // --- SENTENCE BUILDER LOGIK ---
+    function setupBuilder(sentence) {
+        buildTarget = sentence.split(" ");
+        buildBank = shuffle([...buildTarget]);
+        buildSelected = [];
+        renderBuilder();
+    }
+    
+    function renderBuilder() {
+        let drop = document.getElementById('build-answer');
+        let bank = document.getElementById('build-bank');
+        drop.innerHTML = ""; bank.innerHTML = "";
+
+        buildSelected.forEach((word, i) => {
+            let btn = document.createElement('div');
+            btn.className = 'word-piece'; btn.innerText = word;
+            btn.onclick = () => { buildBank.push(word); buildSelected.splice(i, 1); renderBuilder(); };
+            drop.appendChild(btn);
+        });
+
+        buildBank.forEach((word, i) => {
+            let btn = document.createElement('div');
+            btn.className = 'word-piece'; btn.innerText = word;
+            btn.onclick = () => { buildSelected.push(word); buildBank.splice(i, 1); renderBuilder(); };
+            bank.appendChild(btn);
+        });
+        document.getElementById('build-submit').style.display = 'block';
+    }
+
+    function checkBuilder() {
+        if(buildSelected.length === 0) return;
+        let ans = buildSelected.join(" ");
+        let correct = buildTarget.join(" ");
+        
+        document.getElementById('build-submit').style.display = 'none';
+        
+        if(ans === correct) {
+            showFeedback("Snyggt! Ordföljden är perfekt.", true);
+            document.getElementById('build-answer').style.borderColor = "var(--secondary)";
+            score++;
+        } else {
+            showFeedback(`Fel ordföljd. Rätt: "${correct}"`, false);
+            document.getElementById('build-answer').style.borderColor = "var(--danger)";
+        }
+        // Inaktivera klick
+        document.querySelectorAll('.word-piece').forEach(b => b.onclick = null);
+        showNextBtn();
+    }
+
+    // --- HJÄLPMETODER ---
+    function showFeedback(msg, isCorrect) {
+        let fb = document.getElementById('feedback-msg');
+        fb.innerText = msg;
+        fb.style.backgroundColor = isCorrect ? "#eafaf1" : "#fdedec";
+        fb.style.color = isCorrect ? "var(--secondary)" : "var(--danger)";
+    }
+
+    function resetUI() {
+        document.getElementById('options-area').style.display = 'none';
+        document.getElementById('spelling-area').style.display = 'none';
+        document.getElementById('builder-area').style.display = 'none';
+        document.getElementById('next-btn').style.display = 'none';
+        document.getElementById('spell-input').style.borderColor = "#bdc3c7";
+        document.getElementById('build-answer').style.borderColor = "#bdc3c7";
+        let fb = document.getElementById('feedback-msg');
+        fb.innerText = ""; fb.style.backgroundColor = "transparent";
+    }
+
+    function showNextBtn() {
+        document.getElementById('next-btn').style.display = 'block';
+        updateStats();
+    }
+
+    function nextQuestion() {
+        currentIndex++;
+        loadQuestion();
+    }
+
+    function updateStats() {
+        document.getElementById('score').innerText = score;
+        document.getElementById('progress').innerText = `${Math.min(currentIndex + 1, activeData.length)}/${activeData.length}`;
+    }
+
+    function endGame() {
+        resetUI();
+        document.getElementById('question-text').innerText = "Träning slutförd!";
+        showFeedback(`Du fick ${score} av ${activeData.length} rätt!`, true);
+        let btn = document.getElementById('next-btn');
+        btn.innerText = "Spela igen";
+        btn.onclick = () => location.reload();
+        btn.style.display = 'block';
+    }
+</script>
+
+</body>
+</html>
