@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Svenska Ord - B1/C1 Psykologi & Arbetsliv</title>
+    <style>
+        :root {
+            --primary: #4A90E2; 
+            --secondary: #F39C12; 
+            --bg-color: #f8f9fa;
+            --text-color: #2c3e50;
+            --card-bg: #ffffff;
+            --success: #27ae60;
+            --danger: #c0392b;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: var(--card-bg);
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+            padding: 35px;
+            width: 90%;
+            max-width: 650px;
+            text-align: center;
+        }
+        h1 {
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+        p.subtitle {
+            color: #7f8c8d;
+            font-size: 1em;
+            margin-bottom: 30px;
+        }
+        .flashcard {
+            background: linear-gradient(135deg, var(--primary), #2980b9);
+            color: white;
+            padding: 40px 20px;
+            border-radius: 12px;
+            font-size: 2.2em;
+            font-weight: bold;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(41, 128, 185, 0.3);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+            letter-spacing: 1px;
+        }
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        button.option-btn {
+            background-color: var(--bg-color);
+            border: 2px solid #bdc3c7;
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-color);
+            font-weight: 500;
+        }
+        button.option-btn:hover {
+            border-color: var(--secondary);
+            background-color: #fdf6e3;
+            transform: translateY(-2px);
+        }
+        button.option-btn:disabled {
+            cursor: not-allowed;
+            transform: none;
+        }
+        .correct {
+            background-color: var(--success) !important;
+            color: white !important;
+            border-color: var(--success) !important;
+        }
+        .wrong {
+            background-color: var(--danger) !important;
+            color: white !important;
+            border-color: var(--danger) !important;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #ecf0f1;
+            color: #34495e;
+        }
+        .missed-words-section {
+            margin-top: 30px;
+            text-align: left;
+            display: none;
+            background-color: #fcf3cf;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 5px solid var(--secondary);
+        }
+        .missed-words-section h3 {
+            margin-top: 0;
+            color: #d35400;
+        }
+        ul#missed-list {
+            padding-left: 20px;
+            margin-bottom: 0;
+            color: #d35400;
+            line-height: 1.6;
+        }
+        #next-btn {
+            background-color: var(--secondary);
+            color: #fff;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.1em;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            display: none;
+            margin: 0 auto;
+            transition: background 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        #next-btn:hover {
+            background-color: #e67e22;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Svenska Ord B1-C1</h1>
+    <p class="subtitle">Tema: Psykologi, Arbetsliv & Kommunikation</p>
+    
+    <div class="flashcard" id="word-display">Laddar...</div>
+    
+    <div class="options-grid" id="options-container">
+        <!-- Knappar genereras här av JS -->
+    </div>
+    
+    <button id="next-btn" onclick="nextQuestion()">Nästa ord ➔</button>
+    
+    <div class="stats">
+        <span>Framsteg: <span id="progress-text">0/50</span></span>
+        <span>Poäng: <span id="score-text">0</span></span>
+    </div>
+
+    <div class="missed-words-section" id="missed-section">
+        <h3>Felaktiga svar: Dina zoner för tillväxt</h3>
+        <ul id="missed-list"></ul>
+    </div>
+</div>
+
+<script>
+    const words = [
+        {sv: "Självkänsla", ru: "Самооценка / Чувство собственного достоинства"},
+        {sv: "Självförtroende", ru: "Уверенность в себе"},
+        {sv: "Bekräftelse", ru: "Подтверждение / Одобрение"},
+        {sv: "Medvetenhet", ru: "Осознанность"},
+        {sv: "Uppfatta", ru: "Воспринимать / Понимать"},
+        {sv: "Tolka", ru: "Интерпретировать / Толковать"},
+        {sv: "Konflikthantering", ru: "Разрешение конфликтов"},
+        {sv: "Förhandla", ru: "Вести переговоры"},
+        {sv: "Övertyga", ru: "Убеждать"},
+        {sv: "Påverka", ru: "Влиять"},
+        {sv: "Samspel", ru: "Взаимодействие / Командная игра"},
+        {sv: "Engagemang", ru: "Вовлеченность / Энтузиазм"},
+        {sv: "Förmåga", ru: "Способность / Умение"},
+        {sv: "Förutsättning", ru: "Условие / Предпосылка"},
+        {sv: "Målsättning", ru: "Постановка целей / Целеустремленность"},
+        {sv: "Syfte", ru: "Цель / Назначение (глубинный смысл)"},
+        {sv: "Innebörd", ru: "Смысл / Значение"},
+        {sv: "Företeelse", ru: "Явление / Феномен"},
+        {sv: "Påtaglig", ru: "Ощутимый / Явный / Заметный"},
+        {sv: "Vedertagen", ru: "Общепринятый / Установленный"},
+        {sv: "Utmaning", ru: "Вызов / Сложная задача"},
+        {sv: "Erfarenhet", ru: "Опыт"},
+        {sv: "Utvärdera", ru: "Оценивать / Анализировать результаты"},
+        {sv: "Prioritera", ru: "Расставлять приоритеты"},
+        {sv: "Nätverka", ru: "Заводить профессиональные связи (нетворкинг)"},
+        {sv: "Beslutsfattande", ru: "Принятие решений"},
+        {sv: "Drivkraft", ru: "Движущая сила / Мотивация"},
+        {sv: "Anpassa", ru: "Адаптировать / Приспосабливать"},
+        {sv: "Hantera", ru: "Справляться / Управлять (ситуацией)"},
+        {sv: "Sammanhang", ru: "Контекст / Связь"},
+        {sv: "Förhållningssätt", ru: "Подход / Отношение (к чему-либо)"},
+        {sv: "Inblandad", ru: "Вовлеченный / Причастный"},
+        {sv: "Reflektera", ru: "Размышлять / Рефлексировать"},
+        {sv: "Tillförlitlig", ru: "Надежный / Достоверный"},
+        {sv: "Uthållighet", ru: "Выносливость / Упорство"},
+        {sv: "Ansvar", ru: "Ответственность"},
+        {sv: "Förväntning", ru: "Ожидание"},
+        {sv: "Tålamod", ru: "Терпение"},
+        {sv: "Framgång", ru: "Успех"},
+        {sv: "Motgång", ru: "Неудача / Препятствие"},
+        {sv: "Ursäkta", ru: "Извиняться / Находить оправдания"},
+        {sv: "Begrepp", ru: "Понятие / Термин"},
+        {sv: "Självständig", ru: "Независимый / Самостоятельный"},
+        {sv: "Gemenskap", ru: "Общность / Единение"},
+        {sv: "Kompromiss", ru: "Компромисс"},
+        {sv: "Tillit", ru: "Доверие"},
+        {sv: "Insikt", ru: "Озарение / Понимание (инсайт)"},
+        {sv: "Kognitiv", ru: "Когнитивный (познавательный)"},
+        {sv: "Beteende", ru: "Поведение"},
+        {sv: "Utveckling", ru: "Развитие / Эволюция"}
+    ];
+
+    let currentQuestions = [];
+    let currentIndex = 0;
+    let score = 0;
+    let missedWords = [];
+    let currentCorrectAnswer = "";
+
+    function shuffle(array) {
+        let currentIndex = array.length, randomIndex;
+        while (currentIndex !== 0) {
+            randomIndex = Math.floor(Math.random() * currentIndex);
+            currentIndex--;
+            [array[currentIndex], array[randomIndex]] = [
+                array[randomIndex], array[currentIndex]];
+        }
+        return array;
+    }
+
+    function initGame() {
+        currentQuestions = shuffle([...words]);
+        currentIndex = 0;
+        score = 0;
+        missedWords = [];
+        updateUI();
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        if (currentIndex >= currentQuestions.length) {
+            endGame();
+            return;
+        }
+
+        const currentWord = currentQuestions[currentIndex];
+        document.getElementById('word-display').innerText = currentWord.sv;
+        currentCorrectAnswer = currentWord.ru;
+
+        let options = [currentWord.ru];
+        let availableWords = words.filter(w => w.ru !== currentWord.ru);
+        availableWords = shuffle(availableWords);
+        
+        for (let i = 0; i < 3; i++) {
+            options.push(availableWords[i].ru);
+        }
+        options = shuffle(options);
+
+        const container = document.getElementById('options-container');
+        container.innerHTML = "";
+        
+        options.forEach(option => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = option;
+            btn.onclick = () => checkAnswer(btn, option, currentWord);
+            container.appendChild(btn);
+        });
+
+        document.getElementById('next-btn').style.display = 'none';
+    }
+
+    function checkAnswer(btn, selected, currentWord) {
+        const buttons = document.querySelectorAll('.option-btn');
+        buttons.forEach(b => b.disabled = true);
+
+        if (selected === currentCorrectAnswer) {
+            btn.classList.add('correct');
+            score++;
+        } else {
+            btn.classList.add('wrong');
+            buttons.forEach(b => {
+                if (b.innerText === currentCorrectAnswer) {
+                    b.classList.add('correct');
+                }
+            });
+            if (!missedWords.find(w => w.sv === currentWord.sv)) {
+                missedWords.push(currentWord);
+                updateMissedList();
+            }
+        }
+
+        updateUI();
+        document.getElementById('next-btn').style.display = 'block';
+    }
+
+    function nextQuestion() {
+        currentIndex++;
+        loadQuestion();
+        updateUI();
+    }
+
+    function updateUI() {
+        document.getElementById('score-text').innerText = score;
+        document.getElementById('progress-text').innerText = `${Math.min(currentIndex + 1, currentQuestions.length)}/${currentQuestions.length}`;
+    }
+
+    function updateMissedList() {
+        const section = document.getElementById('missed-section');
+        const list = document.getElementById('missed-list');
+        section.style.display = 'block';
+        
+        list.innerHTML = "";
+        missedWords.forEach(word => {
+            const li = document.createElement('li');
+            li.innerHTML = `<strong>${word.sv}</strong> - ${word.ru}`;
+            list.appendChild(li);
+        });
+    }
+
+    function endGame() {
+        document.getElementById('word-display').innerText = "Grattis! Du är klar!";
+        document.getElementById('options-container').innerHTML = `
+            <p style="grid-column: span 2; font-size: 1.2em; color: #34495e;">Du fick ${score} rätt av ${currentQuestions.length}.</p>
+        `;
+        document.getElementById('next-btn').innerText = "Spela igen";
+        document.getElementById('next-btn').style.display = 'block';
+        document.getElementById('next-btn').onclick = () => location.reload();
+    }
+
+    window.onload = initGame;
+</script>
+
+</body>
+</html>

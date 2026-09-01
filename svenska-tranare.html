@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Svenska Tränare — Ordtränare · Meningsbyggare · Prepositionstränare</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f6f8;color:#111827;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer}
+input{font-family:inherit}
+#root{min-height:100vh}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useCallback,useEffect} = React;
+
+/* ══════════════════════════════════════════
+   SHARED UTILITIES
+   ══════════════════════════════════════════ */
+function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function normalize(s){return s.toLowerCase().replace(/[.,!?;:()]/g,"").trim();}
+
+const SS={
+  wrap:{maxWidth:440,margin:"0 auto",padding:"16px 16px 32px",minHeight:"100vh"},
+  title:{fontSize:26,fontWeight:700,margin:"12px 0 4px",letterSpacing:"-0.5px",textAlign:"center"},
+  sub:{color:"#6b7280",fontSize:13,margin:"0 0 2px",textAlign:"center"},
+  sub2:{color:"#9ca3af",fontSize:11,margin:0,textAlign:"center"},
+  section:{marginBottom:14},
+  label:{fontSize:13,color:"#6b7280",marginBottom:6},
+  chips:{display:"flex",flexWrap:"wrap",gap:6},
+  chip:{padding:"5px 10px",border:"1.5px solid #e5e7eb",borderRadius:16,background:"#fff",fontSize:11,color:"#374151",cursor:"pointer"},
+  chipOn:{fontWeight:600,backgroundColor:"#eff6ff"},
+  primary:(c)=>({width:"100%",padding:"13px",backgroundColor:c||"#1e3a5f",color:"#fff",border:"none",borderRadius:10,fontSize:15,fontWeight:600,cursor:"pointer"}),
+  secondary:{width:"100%",padding:"12px",backgroundColor:"#fff",color:"#374151",border:"1.5px solid #d1d5db",borderRadius:10,fontSize:14,cursor:"pointer"},
+  card:{backgroundColor:"#fff",border:"1.5px solid #e5e7eb",borderRadius:12,padding:"20px 16px"},
+  catBadge:(c)=>({display:"inline-block",padding:"3px 8px",borderRadius:10,fontSize:11,fontWeight:600,backgroundColor:(c||"#666")+"18",color:c||"#666"}),
+  topBar:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4},
+  back:{background:"none",border:"none",color:"#6b7280",fontSize:14,cursor:"pointer",padding:0},
+  bar:{height:3,backgroundColor:"#e5e7eb",borderRadius:2,marginBottom:4,overflow:"hidden"},
+  barFill:(c)=>({height:"100%",backgroundColor:c||"#1e3a5f",borderRadius:2,transition:"width 0.3s"}),
+  doneEmoji:{fontSize:48,textAlign:"center",marginBottom:8},
+  doneTitle:{textAlign:"center",fontSize:22,fontWeight:700,margin:"0 0 4px"},
+};
+
+/* ══════════════════════════════════════════
+   1. ORDTRÄNARE — 50 words
+   ══════════════════════════════════════════ */
+const WORDS=[
+  {sv:"en vana",ru:"привычка",cat:"psyk"},{sv:"underskatta",ru:"недооценивать",cat:"psyk"},
+  {sv:"ränta",ru:"процентная ставка",cat:"fin"},{sv:"avkastning",ru:"доходность",cat:"fin"},
+  {sv:"aktie",ru:"акция",cat:"fin"},{sv:"utdelning",ru:"дивиденд",cat:"fin"},
+  {sv:"sparande",ru:"сбережения",cat:"fin"},{sv:"skuld",ru:"долг",cat:"fin"},
+  {sv:"investering",ru:"инвестиция",cat:"fin"},{sv:"börs",ru:"биржа",cat:"fin"},
+  {sv:"inkomst",ru:"доход",cat:"fin"},{sv:"utgift",ru:"расход",cat:"fin"},
+  {sv:"skatt",ru:"налог",cat:"fin"},{sv:"bolån",ru:"ипотека",cat:"fin"},
+  {sv:"budget",ru:"бюджет",cat:"fin"},{sv:"fondportfölj",ru:"портфель фондов",cat:"fin"},
+  {sv:"kusin",ru:"двоюродный брат/сестра",cat:"vardag"},{sv:"utbrändhet",ru:"выгорание",cat:"psyk"},
+  {sv:"besvikelse",ru:"разочарование",cat:"psyk"},{sv:"strykjärn",ru:"утюг",cat:"vardag"},
+  {sv:"gränssättning",ru:"установление границ",cat:"psyk"},{sv:"självkänsla",ru:"самооценка",cat:"psyk"},
+  {sv:"disktrasa",ru:"тряпка для посуды",cat:"vardag"},{sv:"ångest",ru:"тревога",cat:"psyk"},
+  {sv:"sårbar",ru:"уязвимый",cat:"psyk"},{sv:"medveten",ru:"осознанный",cat:"psyk"},
+  {sv:"trygghet",ru:"безопасность, уверенность",cat:"psyk"},{sv:"tillit",ru:"доверие",cat:"psyk"},
+  {sv:"löneförhandling",ru:"переговоры о зарплате",cat:"karriär"},{sv:"befordran",ru:"повышение (в должности)",cat:"karriär"},
+  {sv:"uppsägning",ru:"увольнение",cat:"karriär"},{sv:"anställning",ru:"трудоустройство",cat:"karriär"},
+  {sv:"arbetsgivare",ru:"работодатель",cat:"karriär"},{sv:"dammsugare",ru:"пылесос",cat:"vardag"},
+  {sv:"tvättmaskin",ru:"стиральная машина",cat:"vardag"},{sv:"sopsortering",ru:"сортировка мусора",cat:"vardag"},
+  {sv:"sammanställning",ru:"сводка, отчёт",cat:"karriär"},{sv:"tillräckligt",ru:"достаточно",cat:"vardag"},
+  {sv:"decennium",ru:"десятилетие",cat:"vardag"},{sv:"kompensera",ru:"компенсировать",cat:"karriär"},
+  {sv:"förutsatt att",ru:"при условии что",cat:"gram"},{sv:"trots att",ru:"несмотря на то что",cat:"gram"},
+  {sv:"i och med att",ru:"в связи с тем что",cat:"gram"},{sv:"sortera bort",ru:"отсортировать, отсеять",cat:"vardag"},
+  {sv:"skänka",ru:"дарить, пожертвовать",cat:"vardag"},{sv:"stänga av",ru:"выключить",cat:"vardag"},
+  {sv:"sätta på",ru:"включить",cat:"vardag"},{sv:"ställa in",ru:"отменить, настроить",cat:"vardag"},
+  {sv:"ta reda på",ru:"выяснить",cat:"vardag"},{sv:"hänga med",ru:"поспевать, понимать",cat:"vardag"},
+];
+const WORD_CATS={fin:{l:"Финансы",c:"#2563eb"},psyk:{l:"Психология",c:"#7c3aed"},karriär:{l:"Карьера",c:"#0891b2"},vardag:{l:"Быт",c:"#059669"},gram:{l:"Связки",c:"#d97706"}};
+const WORD_MODES=[{id:"ru2sv",label:"RU → SV",emoji:"🇷🇺→🇸🇪"},{id:"sv2ru",label:"SV → RU",emoji:"🇸🇪→🇷🇺"},{id:"spell",label:"Правописание",emoji:"✏️"}];
+
+function genOpts(correct,all,field){const others=all.filter(w=>w!==correct);const d=shuffle(others).slice(0,3);return shuffle([correct,...d]).map(w=>({label:w[field],isCorrect:w===correct}));}
+
+function Ordtranare({onBack}){
+  const[screen,setScreen]=useState("start");
+  const[mode,setMode]=useState(null);
+  const[queue,setQueue]=useState([]);
+  const[idx,setIdx]=useState(0);
+  const[options,setOptions]=useState([]);
+  const[selected,setSelected]=useState(null);
+  const[input,setInput]=useState("");
+  const[show,setShow]=useState(false);
+  const[ok,setOk]=useState(false);
+  const[score,setScore]=useState(0);
+  const[wrong,setWrong]=useState([]);
+  const[filter,setFilter]=useState("all");
+
+  const start=useCallback((m,cq)=>{
+    setMode(m);const fil=filter==="all"?WORDS:WORDS.filter(w=>w.cat===filter);
+    const q=cq||shuffle(fil);setQueue(q);setIdx(0);setScore(0);setWrong([]);setSelected(null);setInput("");setShow(false);
+    if(m==="ru2sv")setOptions(genOpts(q[0],WORDS,"sv"));
+    else if(m==="sv2ru")setOptions(genOpts(q[0],WORDS,"ru"));
+    setScreen("play");
+  },[filter]);
+
+  const pick=(opt)=>{if(show)return;setSelected(opt);setShow(true);setOk(opt.isCorrect);if(opt.isCorrect)setScore(s=>s+1);else setWrong(w=>[...w,queue[idx]]);};
+  const checkSpell=()=>{if(show)return;const c=normalize(input)===normalize(queue[idx].sv);setShow(true);setOk(c);if(c)setScore(s=>s+1);else setWrong(w=>[...w,queue[idx]]);};
+  const next=()=>{const ni=idx+1;if(ni>=queue.length){setScreen("done");return;}setIdx(ni);setSelected(null);setInput("");setShow(false);if(mode==="ru2sv")setOptions(genOpts(queue[ni],WORDS,"sv"));else if(mode==="sv2ru")setOptions(genOpts(queue[ni],WORDS,"ru"));};
+
+  if(screen==="start"){
+    return <div style={SS.wrap}>
+      <button style={{...SS.back,marginBottom:12}} onClick={onBack}>← Главное меню</button>
+      <h1 style={{...SS.title,color:"#0c4a6e"}}>Ordtränare</h1>
+      <p style={SS.sub}>50 слов из наших сессий</p>
+      <div style={{...SS.section,marginTop:16}}>
+        <p style={SS.label}>Категория:</p>
+        <div style={SS.chips}>
+          <button style={{...SS.chip,...(filter==="all"?{...SS.chipOn,borderColor:"#0c4a6e",color:"#0c4a6e"}:{})}} onClick={()=>setFilter("all")}>Все (50)</button>
+          {Object.entries(WORD_CATS).map(([k,v])=><button key={k} style={{...SS.chip,...(filter===k?{...SS.chipOn,borderColor:v.c,color:v.c}:{})}} onClick={()=>setFilter(k)}>{v.l} ({WORDS.filter(w=>w.cat===k).length})</button>)}
+        </div>
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        {WORD_MODES.map(m=><button key={m.id} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 18px",border:"1.5px solid #e5e7eb",borderRadius:12,background:"#fff",fontSize:15}} onClick={()=>start(m.id)}><span style={{fontSize:22}}>{m.emoji}</span><span style={{fontWeight:500}}>{m.label}</span></button>)}
+      </div>
+    </div>;
+  }
+
+  if(screen==="done"){
+    const pct=Math.round((score/queue.length)*100);
+    return <div style={SS.wrap}>
+      <div style={{...SS.card,marginTop:20,textAlign:"center"}}>
+        <div style={SS.doneEmoji}>{pct>=80?"🎉":pct>=50?"👍":"💪"}</div>
+        <h2 style={SS.doneTitle}>Результат</h2>
+        <p style={{textAlign:"center",fontSize:28,fontWeight:700,color:"#0c4a6e",margin:"0 0 12px"}}>{score}/{queue.length} ({pct}%)</p>
+        <div style={SS.bar}><div style={{...SS.barFill(pct>=80?"#059669":pct>=50?"#d97706":"#dc2626"),width:`${pct}%`}}/></div>
+        {wrong.length>0&&<div style={{borderTop:"1px solid #e5e7eb",paddingTop:12,marginTop:12,textAlign:"left"}}>
+          <p style={{fontSize:14,fontWeight:600,color:"#991b1b",marginBottom:8}}>Ошибки ({wrong.length}):</p>
+          {wrong.map((w,i)=><div key={i} style={{fontSize:13,marginBottom:4}}><strong>{w.sv}</strong> <span style={{color:"#6b7280"}}>— {w.ru}</span></div>)}
+          <button style={{...SS.primary("#0c4a6e"),marginTop:8}} onClick={()=>start(mode,shuffle(wrong))}>Повторить ошибки</button>
+        </div>}
+        <button style={{...SS.secondary,marginTop:12}} onClick={()=>setScreen("start")}>В меню</button>
+      </div>
+    </div>;
+  }
+
+  const word=queue[idx];const cc=WORD_CATS[word.cat];
+  const prompt=mode==="sv2ru"?word.sv:word.ru;
+  return <div style={SS.wrap}>
+    <div style={SS.topBar}><button style={SS.back} onClick={()=>setScreen("start")}>← Меню</button><span style={{fontSize:13,color:"#6b7280"}}>{idx+1}/{queue.length}</span><span style={{fontSize:14,color:"#059669",fontWeight:600}}>✓ {score}</span></div>
+    <div style={SS.bar}><div style={{...SS.barFill("#0c4a6e"),width:`${((idx+1)/queue.length)*100}%`}}/></div>
+    <div style={{...SS.card,marginTop:12,marginBottom:16,textAlign:"center"}}>
+      <span style={SS.catBadge(cc.c)}>{cc.l}</span>
+      <p style={{fontSize:22,fontWeight:600,color:"#111827",margin:"10px 0 0",lineHeight:1.3}}>{prompt}</p>
+    </div>
+    {mode==="spell"?<div style={{display:"flex",flexDirection:"column",gap:10}}>
+      <p style={{fontSize:13,color:"#6b7280"}}>Напиши по-шведски:</p>
+      <input style={{padding:"12px 14px",border:"1.5px solid #e5e7eb",borderRadius:10,fontSize:16,outline:"none"}} value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&!show&&checkSpell()} placeholder="skriv här..." autoFocus disabled={show}/>
+      {!show&&<button style={SS.primary("#0c4a6e")} onClick={checkSpell}>Проверить</button>}
+      {show&&<div style={{padding:"12px 14px",borderRadius:10,border:"1.5px solid",backgroundColor:ok?"#f0fdf4":"#fef2f2",borderColor:ok?"#86efac":"#fca5a5"}}>
+        <p style={{fontWeight:600,color:ok?"#166534":"#991b1b"}}>{ok?"Rätt! ✓":"Fel ✗"}</p>
+        {!ok&&<p style={{marginTop:4}}>Правильно: <strong>{word.sv}</strong></p>}
+      </div>}
+    </div>:<div style={{display:"flex",flexDirection:"column",gap:8}}>
+      {options.map((opt,i)=>{
+        let bg="#fff",border="#e5e7eb",color="#1f2937";
+        if(show){if(opt.isCorrect){bg="#f0fdf4";border="#86efac";color="#166534";}else if(selected===opt&&!opt.isCorrect){bg="#fef2f2";border="#fca5a5";color="#991b1b";}}
+        return <button key={i} style={{padding:"14px 16px",border:`1.5px solid ${border}`,borderRadius:10,fontSize:15,textAlign:"left",backgroundColor:bg,color,fontWeight:500,transition:"all 0.12s"}} onClick={()=>pick(opt)}>{opt.label}</button>;
+      })}
+    </div>}
+    {show&&<button style={{...SS.primary("#0c4a6e"),marginTop:12}} onClick={next}>{idx+1<queue.length?"Следующее →":"Результаты →"}</button>}
+  </div>;
+}
+
+/* ══════════════════════════════════════════
+   2. MENINGSBYGGARE — 18 sentences
+   ══════════════════════════════════════════ */
+const SENTS=[
+  {words:["Trots","att","jag","har","jobbat","här","i","fem","år,","har","jag","aldrig","fått","en","befordran"],ru:"Несмотря на то что я проработала здесь пять лет, я ни разу не получила повышение.",tags:["trots att","V2"],tip:"V2: после придаточного с «trots att» — инверсия в главном"},
+  {words:["Den","här","nya","kollegan","verkar","väldigt","kompetent"],ru:"Этот новый коллега кажется очень компетентным.",tags:["dubbel bestämdhet"],tip:"Dubbel bestämdhet: den här + nya + kollegan (определённая форма!)"},
+  {words:["Igår","ställde","chefen","in","mötet","utan","att","meddela","oss"],ru:"Вчера начальник отменил встречу, не уведомив нас.",tags:["V2","partikelverb"],tip:"V2 после «igår» + partikelverb «ställa in»"},
+  {words:["Jag","måste","ta","reda","på","varför","systemet","inte","fungerar"],ru:"Я должна выяснить, почему система не работает.",tags:["partikelverb","bisats"],tip:"«ta reda på» + bisats: «inte» перед глаголом в придаточном"},
+  {words:["Om","du","inte","hänger","med,","kan","jag","förklara","det","en","gång","till"],ru:"Если ты не поспеваешь, я могу объяснить это ещё раз.",tags:["bisats","V2","partikelverb"],tip:"Bisats (om) + V2 в главном + «hänga med»"},
+  {words:["De","slitna","kläderna","borde","skänkas","till","second","hand"],ru:"Изношенную одежду стоило бы пожертвовать в секонд-хенд.",tags:["dubbel bestämdhet","partikelverb"],tip:"Dubbel bestämdhet: de + slitna + kläderna"},
+  {words:["Förutsatt","att","räntan","inte","stiger,","kan","vi","ta","bolånet","nu"],ru:"При условии что ставка не вырастет, мы можем взять ипотеку сейчас.",tags:["förutsatt att","V2"],tip:"«förutsatt att» + bisats, затем V2"},
+  {words:["Hon","underskattade","sin","förmåga","att","hantera","konflikter"],ru:"Она недооценила свою способность справляться с конфликтами.",tags:["sin/sitt"],tip:"«sin» — потому что владелец (hon) = подлежащее"},
+  {words:["I","och","med","att","budgeten","har","minskat,","måste","vi","prioritera","annorlunda"],ru:"В связи с тем что бюджет сократился, мы должны расставлять приоритеты иначе.",tags:["i och med att","V2"],tip:"«i och med att» + bisats, затем V2-инверсия"},
+  {words:["Varje","morgon","stänger","jag","av","telefonen","för","att","kunna","fokusera"],ru:"Каждое утро я выключаю телефон, чтобы сосредоточиться.",tags:["V2","partikelverb"],tip:"V2 после «varje morgon» + «stänga av»"},
+  {words:["Kanske","borde","vi","kompensera","för","den","förlorade","tiden"],ru:"Может быть, нам стоит компенсировать потерянное время.",tags:["V2","предлог"],tip:"V2 после «kanske» + «kompensera FÖR»"},
+  {words:["Tyvärr","kan","jag","inte","sätta","på","tvättmaskinen","förrän","i","morgon"],ru:"К сожалению, я не могу включить стиральную машину до завтра.",tags:["V2","partikelverb"],tip:"V2 после «tyvärr» + «sätta på»"},
+  {words:["Trots","att","sparandet","har","ökat,","känner","sig","många","osäkra","på","sin","ekonomi"],ru:"Несмотря на то что сбережения выросли, многие чувствуют неуверенность в своих финансах.",tags:["trots att","V2","sin/sitt"],tip:"«trots att» + V2 + «sin» (владелец = подлежащее)"},
+  {words:["Efter","löneförhandlingen","bestämde","hon","sig","för","att","söka","en","ny","anställning"],ru:"После переговоров о зарплате она решила искать новое трудоустройство.",tags:["V2"],tip:"V2 после вынесенного «efter löneförhandlingen»"},
+  {words:["Självkänslan","påverkas","av","hur","vi","hanterar","besvikelser","i","vardagen"],ru:"Самооценка зависит от того, как мы справляемся с разочарованиями в повседневности.",tags:["bisats"],tip:"Прямой порядок в главном + bisats с «hur»"},
+  {words:["Det","är","viktigt","att","inte","underskatta","vikten","av","gränssättning"],ru:"Важно не недооценивать значение установления границ.",tags:["att-sats"],tip:"«att inte» — отрицание перед инфинитивом"},
+  {words:["Först","sorterade","jag","bort","alla","onödiga","utgifter","ur","budgeten"],ru:"Сначала я отсортировала все ненужные расходы из бюджета.",tags:["V2","partikelverb"],tip:"V2 после «först» + «sortera bort»"},
+  {words:["Den","där","känslan","av","ångest","försvinner","inte","bara","för","att","man","ignorerar","den"],ru:"То чувство тревоги не исчезнет просто от того, что его игнорируешь.",tags:["dubbel bestämdhet","bisats"],tip:"«den där» + känslan (dubbel bestämdhet!)"},
+];
+
+function Meningsbyggare({onBack}){
+  const[screen,setScreen]=useState("start");
+  const[queue,setQueue]=useState([]);
+  const[idx,setIdx]=useState(0);
+  const[scrambled,setScrambled]=useState([]);
+  const[built,setBuilt]=useState([]);
+  const[checked,setChecked]=useState(false);
+  const[ok,setOk]=useState(false);
+  const[score,setScore]=useState(0);
+  const[wrong,setWrong]=useState([]);
+  const[tagF,setTagF]=useState("all");
+  const allTags=[...new Set(SENTS.flatMap(s=>s.tags))];
+
+  const startG=useCallback(()=>{
+    const fil=tagF==="all"?SENTS:SENTS.filter(s=>s.tags.includes(tagF));
+    const q=shuffle(fil);setQueue(q);setIdx(0);setScore(0);setWrong([]);
+    setScrambled(shuffle(q[0].words.map((w,i)=>({text:w,id:i}))));setBuilt([]);setChecked(false);setScreen("play");
+  },[tagF]);
+
+  const tap=w=>{if(checked)return;setScrambled(s=>s.filter(x=>x.id!==w.id));setBuilt(b=>[...b,w]);};
+  const untap=w=>{if(checked)return;setBuilt(b=>b.filter(x=>x.id!==w.id));setScrambled(s=>[...s,w]);};
+  const check=()=>{const att=built.map(w=>w.text).join(" ");const c=att===queue[idx].words.join(" ");setOk(c);setChecked(true);if(c)setScore(s=>s+1);else setWrong(w=>[...w,queue[idx]]);};
+  const next=()=>{const ni=idx+1;if(ni>=queue.length){setScreen("done");return;}setIdx(ni);setScrambled(shuffle(queue[ni].words.map((w,i)=>({text:w,id:i}))));setBuilt([]);setChecked(false);};
+  const reset=()=>{if(checked)return;setScrambled(shuffle(queue[idx].words.map((w,i)=>({text:w,id:i}))));setBuilt([]);};
+
+  if(screen==="start"){
+    return <div style={SS.wrap}>
+      <button style={{...SS.back,marginBottom:12}} onClick={onBack}>← Главное меню</button>
+      <h1 style={{...SS.title,color:"#4c1d95"}}>Meningsbyggare</h1>
+      <p style={SS.sub}>Собери предложение в правильном порядке</p>
+      <p style={SS.sub2}>V2, partikelverb, bisats, dubbel bestämdhet</p>
+      <div style={{...SS.section,marginTop:16}}>
+        <p style={SS.label}>Фильтр:</p>
+        <div style={SS.chips}>
+          <button style={{...SS.chip,...(tagF==="all"?{...SS.chipOn,borderColor:"#7c3aed",color:"#7c3aed"}:{})}} onClick={()=>setTagF("all")}>Все ({SENTS.length})</button>
+          {allTags.map(t=><button key={t} style={{...SS.chip,...(tagF===t?{...SS.chipOn,borderColor:"#7c3aed",color:"#7c3aed"}:{})}} onClick={()=>setTagF(t)}>{t} ({SENTS.filter(s=>s.tags.includes(t)).length})</button>)}
+        </div>
+      </div>
+      <button style={SS.primary("#4c1d95")} onClick={startG}>Начать →</button>
+    </div>;
+  }
+
+  if(screen==="done"){
+    const pct=Math.round((score/queue.length)*100);
+    return <div style={SS.wrap}>
+      <div style={{...SS.card,marginTop:20,textAlign:"center"}}>
+        <div style={SS.doneEmoji}>{pct>=80?"🎉":pct>=50?"👍":"💪"}</div>
+        <h2 style={SS.doneTitle}>Результат</h2>
+        <p style={{textAlign:"center",fontSize:28,fontWeight:700,color:"#4c1d95",margin:"0 0 12px"}}>{score}/{queue.length} ({pct}%)</p>
+        <div style={SS.bar}><div style={{...SS.barFill("#4c1d95"),width:`${pct}%`}}/></div>
+        {wrong.length>0&&<div style={{borderTop:"1px solid #e5e7eb",paddingTop:12,marginTop:12,textAlign:"left"}}>
+          <p style={{fontSize:14,fontWeight:600,color:"#991b1b",marginBottom:8}}>Ошибки:</p>
+          {wrong.map((s,i)=><div key={i} style={{marginBottom:10,fontSize:13}}><p style={{fontWeight:600,margin:"0 0 2px"}}>{s.words.join(" ")}</p><p style={{color:"#6b7280",margin:0,fontSize:12}}>{s.ru}</p></div>)}
+        </div>}
+        <button style={{...SS.secondary,marginTop:12}} onClick={()=>setScreen("start")}>В меню</button>
+      </div>
+    </div>;
+  }
+
+  const sent=queue[idx];
+  return <div style={SS.wrap}>
+    <div style={SS.topBar}><button style={SS.back} onClick={()=>setScreen("start")}>← Меню</button><span style={{fontSize:13,color:"#6b7280"}}>{idx+1}/{queue.length}</span><span style={{fontSize:14,color:"#059669",fontWeight:600}}>✓ {score}</span></div>
+    <div style={SS.bar}><div style={{...SS.barFill("#7c3aed"),width:`${((idx+1)/queue.length)*100}%`}}/></div>
+    <div style={{display:"flex",gap:6,margin:"12px 0 10px",flexWrap:"wrap"}}>{sent.tags.map(t=><span key={t} style={{padding:"3px 8px",backgroundColor:"#f3e8ff",color:"#7c3aed",borderRadius:10,fontSize:11,fontWeight:600}}>{t}</span>)}</div>
+    <div style={{...SS.card,marginBottom:14,padding:"14px 16px"}}><p style={{margin:0,fontSize:15,color:"#111827",lineHeight:1.45}}>{sent.ru}</p></div>
+    <div style={{minHeight:70,backgroundColor:"#fff",border:"2px dashed #c4b5fd",borderRadius:12,padding:10,marginBottom:10,display:"flex",alignItems:"center",justifyContent:"center"}}>
+      {built.length===0?<p style={{color:"#9ca3af",fontSize:13,textAlign:"center"}}>Нажми на слова в правильном порядке ↓</p>:
+      <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+        {built.map((w,i)=>{let bg="#dbeafe",bd="#93c5fd",cl="#1e40af";if(checked){if(w.text===sent.words[i]){bg="#dcfce7";bd="#86efac";cl="#166534";}else{bg="#fee2e2";bd="#fca5a5";cl="#991b1b";}}
+        return <button key={w.id} style={{padding:"7px 12px",backgroundColor:bg,border:`1.5px solid ${bd}`,borderRadius:8,fontSize:14,color:cl,fontWeight:500}} onClick={()=>untap(w)}>{w.text}</button>;})}
+      </div>}
+    </div>
+    <div style={{backgroundColor:"#f9fafb",borderRadius:12,padding:10,marginBottom:14,minHeight:50}}>
+      <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{scrambled.map(w=><button key={w.id} style={{padding:"7px 12px",backgroundColor:"#f3f4f6",border:"1.5px solid #d1d5db",borderRadius:8,fontSize:14,color:"#1f2937",fontWeight:500}} onClick={()=>tap(w)}>{w.text}</button>)}</div>
+    </div>
+    {!checked?<div style={{display:"flex",gap:8}}>
+      <button style={{flex:1,padding:12,backgroundColor:"#fff",border:"1.5px solid #d1d5db",borderRadius:10,fontSize:14,color:"#6b7280"}} onClick={reset}>Сбросить</button>
+      <button style={{flex:2,padding:12,backgroundColor:"#4c1d95",color:"#fff",border:"none",borderRadius:10,fontSize:14,fontWeight:600,opacity:built.length===sent.words.length?1:0.4}} onClick={check} disabled={built.length!==sent.words.length}>Проверить</button>
+    </div>:<div>
+      {!ok&&<div style={{padding:"10px 12px",backgroundColor:"#f0fdf4",borderRadius:10,border:"1px solid #86efac",marginBottom:8}}><p style={{fontWeight:600,fontSize:13,margin:"0 0 4px",color:"#166534"}}>Правильный порядок:</p><p style={{margin:0,fontSize:14}}>{sent.words.join(" ")}</p></div>}
+      <div style={{padding:"8px 12px",backgroundColor:"#faf5ff",borderRadius:8,marginBottom:10}}><p style={{margin:0,fontSize:12,color:"#6b7280"}}>{sent.tip}</p></div>
+      <button style={SS.primary("#4c1d95")} onClick={next}>{idx+1<queue.length?"Следующее →":"Результаты →"}</button>
+    </div>}
+  </div>;
+}
+
+/* ══════════════════════════════════════════
+   3. PREPOSITIONSTRÄNARE — 100 sentences
+   ══════════════════════════════════════════ */
+const PREPS=[
+  {sv:"Trots att vi letade överallt hittade vi nyckeln ___ en spricka i golvet.",answer:"i",opts:["i","på","vid","under"],ru:"Хотя мы искали повсюду, мы нашли ключ в щели в полу.",cat:"plats",diff:2},
+  {sv:"Hon satt ___ soffan med benen uppdragna och stirrade ut genom fönstret.",answer:"i",opts:["i","på","vid","bredvid"],ru:"Она сидела на диване с поджатыми ногами и смотрела в окно.",cat:"plats",diff:3,note:"sitta I soffan — шведы «утопают» в диване"},
+  {sv:"Dokumenten förvaras ___ ett kassaskåp som bara chefen har tillgång till.",answer:"i",opts:["i","på","vid","bakom"],ru:"Документы хранятся в сейфе, к которому имеет доступ только начальник.",cat:"plats",diff:2},
+  {sv:"Förutsatt att inga hinder uppstår, kommer kontoret att ligga ___ sjätte våningen.",answer:"på",opts:["på","i","vid","under"],ru:"При условии что не возникнет препятствий, офис будет на шестом этаже.",cat:"plats",diff:2},
+  {sv:"Konstnären hade gömt sin signatur ___ en av figurerna i målningen.",answer:"bakom",opts:["bakom","i","under","bredvid"],ru:"Художник спрятал свою подпись за одной из фигур на картине.",cat:"plats",diff:3},
+  {sv:"I och med att flygplatsen byggs ut kommer parkeringen att ligga ___ terminalen.",answer:"under",opts:["under","vid","framför","bredvid"],ru:"В связи с расширением аэропорта парковка будет под терминалом.",cat:"plats",diff:2},
+  {sv:"Han stod ___ scenen och kunde inte se publiken på grund av strålkastarna.",answer:"på",opts:["på","vid","framför","bakom"],ru:"Он стоял на сцене и не мог видеть зрителей из-за прожекторов.",cat:"plats",diff:2},
+  {sv:"Temperaturen ___ ytan var betydligt lägre än vad vi hade förväntat oss.",answer:"under",opts:["under","på","vid","ovanför"],ru:"Температура под поверхностью была значительно ниже ожидаемой.",cat:"plats",diff:3,note:"under ytan = под поверхностью"},
+  {sv:"De hittade en hemlig passage ___ de två byggnaderna.",answer:"mellan",opts:["mellan","under","bakom","vid"],ru:"Они нашли тайный проход между двумя зданиями.",cat:"plats",diff:2},
+  {sv:"___ hörnet av Kungsgatan och Sveavägen ligger en av Stockholms äldsta kaféer.",answer:"På",opts:["På","I","Vid","Framför"],ru:"На углу Кунгсгатан и Свеавеген находится одно из старейших кафе.",cat:"plats",diff:2},
+  {sv:"Trots renoveringen finns det fortfarande fukt ___ väggarna i källaren.",answer:"i",opts:["i","på","bakom","vid"],ru:"Несмотря на ремонт, в стенах подвала всё ещё влага.",cat:"plats",diff:3,note:"fukt I väggarna = внутри стен"},
+  {sv:"Vi parkerade bilen ___ ett träd som skyddade den från solen.",answer:"under",opts:["under","vid","bredvid","bakom"],ru:"Мы припарковали машину под деревом.",cat:"plats",diff:2},
+  {sv:"Pengarna låg gömda ___ en falsk botten i resväskan.",answer:"under",opts:["under","i","bakom","vid"],ru:"Деньги лежали спрятанные под фальшивым дном в чемодане.",cat:"plats",diff:3},
+  {sv:"Drönaren svävade ___ taket i nästan tio minuter.",answer:"ovanför",opts:["ovanför","över","på","vid"],ru:"Дрон завис над крышей почти десять минут.",cat:"plats",diff:3,note:"ovanför = прямо над (статично)"},
+  {sv:"I stället för att stå ___ kön gick hon direkt till kassan.",answer:"i",opts:["i","på","vid","framför"],ru:"Вместо того чтобы стоять в очереди, она пошла к кассе.",cat:"plats",diff:2,note:"stå I kön (не «på»!)"},
+  {sv:"Reflexen av solljuset ___ vattenytan blände oss totalt.",answer:"på",opts:["på","i","under","vid"],ru:"Отражение солнечного света на поверхности воды ослепило нас.",cat:"plats",diff:2},
+  {sv:"Fåglarna byggde sitt bo ___ takpannorna.",answer:"under",opts:["under","på","mellan","bakom"],ru:"Птицы свили гнездо под черепицей.",cat:"plats",diff:3},
+  {sv:"Han hittade en gammal dagbok ___ en hög med papper på vinden.",answer:"bland",opts:["bland","i","mellan","under"],ru:"Он нашёл старый дневник среди кучи бумаг на чердаке.",cat:"plats",diff:3,note:"bland = среди (многих); mellan = между (двумя)"},
+  {sv:"Sprickan ___ muren hade blivit större sedan förra inspektionen.",answer:"i",opts:["i","på","vid","genom"],ru:"Трещина в стене стала больше с прошлой проверки.",cat:"plats",diff:2},
+  {sv:"Vi väntade ___ bilen medan regnet öste ner.",answer:"i",opts:["i","vid","bredvid","under"],ru:"Мы ждали в машине, пока лил дождь.",cat:"plats",diff:2},
+  {sv:"Bilderna hänger ___ rad längs hela korridoren.",answer:"på",opts:["på","i","vid","längs"],ru:"Картины висят в ряд вдоль всего коридора.",cat:"plats",diff:3,note:"hänga PÅ rad = в ряд"},
+  {sv:"Kontraktet låg begravt ___ en mapp som ingen hade öppnat på år.",answer:"i",opts:["i","under","bakom","vid"],ru:"Контракт лежал в папке, которую никто не открывал годами.",cat:"plats",diff:2},
+  {sv:"Hotellet ligger ___ gångavstånd från centralstationen.",answer:"inom",opts:["inom","i","vid","på"],ru:"Отель в пешей доступности от вокзала.",cat:"plats",diff:3,note:"inom gångavstånd = в пределах пешей доступности"},
+  {sv:"Alla passagerare ombord ___ flygplanet informerades om förseningen.",answer:"på",opts:["på","i","vid","bredvid"],ru:"Все пассажиры на борту самолёта были уведомлены о задержке.",cat:"plats",diff:3,note:"ombord PÅ = на борту"},
+  {sv:"Det stod en mystisk figur ___ skuggorna vid ingången.",answer:"i",opts:["i","under","bakom","bland"],ru:"В тенях у входа стояла загадочная фигура.",cat:"plats",diff:2},
+  // ═══ TID (25) ═══
+  {sv:"Vi ska ha avslutat projektet ___ slutet av kvartalet.",answer:"vid",opts:["vid","i","på","till"],ru:"Мы должны завершить проект к концу квартала.",cat:"tid",diff:3,note:"vid slutet av = к концу"},
+  {sv:"Avtalet löper ut ___ tre månader om det inte förlängs.",answer:"om",opts:["om","i","på","för"],ru:"Договор истекает через три месяца, если не продлят.",cat:"tid",diff:2},
+  {sv:"De hade bott utomlands ___ nästan ett decennium.",answer:"i",opts:["i","under","på","om"],ru:"Они прожили за границей почти десятилетие.",cat:"tid",diff:2,note:"i + длительность: bott i tio år"},
+  {sv:"Krisen bröt ut ___ en period då ekonomin redan var försvagad.",answer:"under",opts:["under","i","på","vid"],ru:"Кризис разразился в период, когда экономика была ослаблена.",cat:"tid",diff:3},
+  {sv:"Hon fick beskedet ___ sin födelsedag.",answer:"på",opts:["på","i","under","vid"],ru:"Она получила известие в свой день рождения.",cat:"tid",diff:2},
+  {sv:"Vi har inte haft kontakt ___ hon flyttade till Göteborg.",answer:"sedan",opts:["sedan","för","i","efter"],ru:"Мы не общались с тех пор, как она уехала в Гётеборг.",cat:"tid",diff:2},
+  {sv:"Projektet försenades ___ flera veckor på grund av leveransproblem.",answer:"med",opts:["med","i","på","under"],ru:"Проект задержался на несколько недель из-за поставок.",cat:"tid",diff:3,note:"försenas MED + tid = задержаться НА"},
+  {sv:"Trots att de lovade svara ___ fredags har vi inte hört något.",answer:"i",opts:["i","på","om","till"],ru:"Хотя обещали ответить в прошлую пятницу — тишина.",cat:"tid",diff:2},
+  {sv:"Räntan har stigit kraftigt ___ det senaste halvåret.",answer:"under",opts:["under","i","på","vid"],ru:"Ставка значительно выросла за последние полгода.",cat:"tid",diff:2},
+  {sv:"Rapporten ska vara inlämnad senast ___ den 15 mars.",answer:"den",opts:["den","på","i","vid"],ru:"Отчёт нужно сдать не позднее 15 марта.",cat:"tid",diff:3,note:"senast DEN + дата"},
+  {sv:"Vi brukar ta en promenad ___ lunchtid.",answer:"vid",opts:["vid","på","i","under"],ru:"Мы обычно гуляем в обеденное время.",cat:"tid",diff:2,note:"vid lunchtid = около обеда"},
+  {sv:"De har varit gifta ___ 1998.",answer:"sedan",opts:["sedan","för","i","om"],ru:"Они женаты с 1998 года.",cat:"tid",diff:2},
+  {sv:"Flygplanet landade ___ natten och vi fick vänta till morgonen.",answer:"under",opts:["under","i","på","vid"],ru:"Самолёт приземлился ночью, и нам пришлось ждать до утра.",cat:"tid",diff:3,note:"under natten = в течение ночи (процесс)"},
+  {sv:"___ förra vintern var det så kallt att rören i källaren frös.",answer:"Under",opts:["Under","I","På","Vid"],ru:"Прошлой зимой трубы в подвале замёрзли.",cat:"tid",diff:2},
+  {sv:"Han bestämde sig ___ sista minuten för att tacka ja.",answer:"i",opts:["i","på","vid","under"],ru:"Он решился в последнюю минуту принять предложение.",cat:"tid",diff:3,note:"i sista minuten = в последнюю минуту"},
+  {sv:"Vi har inte haft en så kall vinter ___ 2012.",answer:"sedan",opts:["sedan","för","i","under"],ru:"У нас не было такой холодной зимы с 2012 года.",cat:"tid",diff:2},
+  {sv:"Butiken har öppet ___ vardagar men stänger tidigt på helger.",answer:"på",opts:["på","i","under","om"],ru:"Магазин открыт по будням, но рано закрывается по выходным.",cat:"tid",diff:2},
+  {sv:"Systemet uppdateras automatiskt ___ nätterna.",answer:"under",opts:["under","på","i","om"],ru:"Система обновляется автоматически по ночам.",cat:"tid",diff:3,note:"under nätterna = во время ночей (процесс)"},
+  {sv:"Vi fick veta resultatet ___ ett par dagar efter provet.",answer:"efter",opts:["efter","om","i","på"],ru:"Мы узнали результат через пару дней после экзамена.",cat:"tid",diff:2},
+  {sv:"Investeringen förväntas ge avkastning ___ fem till sju år.",answer:"inom",opts:["inom","i","om","under"],ru:"Инвестиция принесёт доходность в течение 5–7 лет.",cat:"tid",diff:3,note:"inom + tid = в пределах (дедлайн)"},
+  {sv:"Han lyckades avsluta boken ___ bara tre veckor.",answer:"på",opts:["på","i","om","under"],ru:"Он закончил книгу всего за три недели.",cat:"tid",diff:3,note:"PÅ + tid (с «bara») = за — подчёркивает скорость"},
+  {sv:"Konferensen äger rum ___ november.",answer:"i",opts:["i","på","under","vid"],ru:"Конференция состоится в ноябре.",cat:"tid",diff:2},
+  {sv:"Intervjun är inbokad ___ torsdag förmiddag.",answer:"på",opts:["på","i","om","under"],ru:"Собеседование назначено на четверг.",cat:"tid",diff:2},
+  {sv:"Mötet varade ___ två timmar utan rast.",answer:"i",opts:["i","på","under","om"],ru:"Встреча длилась два часа без перерыва.",cat:"tid",diff:2,note:"i + длительность: varade i tre dagar"},
+  // ═══ RIKTNING (25) ═══
+  {sv:"Demonstranterna marscherade ___ riksdagshuset trots polisens varningar.",answer:"mot",opts:["mot","till","från","förbi"],ru:"Демонстранты маршировали к парламенту.",cat:"riktning",diff:2,note:"mot = по направлению к"},
+  {sv:"Vattnet forsade ___ berget efter regnfallet.",answer:"nerför",opts:["nerför","uppför","genom","över"],ru:"Вода хлынула вниз по горе после ливня.",cat:"riktning",diff:2},
+  {sv:"Vi simmade ___ ån trots att strömmen var stark.",answer:"över",opts:["över","genom","längs","mot"],ru:"Мы переплыли реку, хотя течение было сильным.",cat:"riktning",diff:2},
+  {sv:"Lastvagnen körde ___ hela Europa utan onödiga stopp.",answer:"genom",opts:["genom","förbi","runt","över"],ru:"Грузовик проехал через всю Европу без лишних остановок.",cat:"riktning",diff:2},
+  {sv:"Turisterna tog en omväg ___ slottet för att se utsikten.",answer:"runt",opts:["runt","genom","förbi","mot"],ru:"Туристы обошли вокруг замка ради вида.",cat:"riktning",diff:2},
+  {sv:"Röklukt spred sig ___ hela byggnaden inom minuter.",answer:"genom",opts:["genom","i","över","runt"],ru:"Запах дыма распространился по всему зданию за минуты.",cat:"riktning",diff:3},
+  {sv:"De klättrade ___ stegen för att nå taket.",answer:"uppför",opts:["uppför","nerför","genom","över"],ru:"Они поднялись по лестнице, чтобы добраться до крыши.",cat:"riktning",diff:2},
+  {sv:"Hon klev ___ tåget med tungt bagage och tre barn.",answer:"av",opts:["av","på","ur","i"],ru:"Она вышла из поезда с тяжёлым багажом.",cat:"riktning",diff:2,note:"kliva AV = выйти (из транспорта)"},
+  {sv:"Vi smet ut ___ bakdörren innan någon märkte det.",answer:"genom",opts:["genom","ur","från","förbi"],ru:"Мы выскользнули через заднюю дверь незаметно.",cat:"riktning",diff:3},
+  {sv:"Cyklisten svängde ___ hörnet och försvann in i gränden.",answer:"runt",opts:["runt","om","förbi","mot"],ru:"Велосипедист завернул за угол и скрылся.",cat:"riktning",diff:3},
+  {sv:"Brevet skickades ___ fel adress och kom tillbaka.",answer:"till",opts:["till","på","mot","vid"],ru:"Письмо отправили на неправильный адрес.",cat:"riktning",diff:2},
+  {sv:"Katten hoppade ___ fönsterbrädan och landade mjukt.",answer:"från",opts:["från","av","genom","över"],ru:"Кот спрыгнул с подоконника и мягко приземлился.",cat:"riktning",diff:2},
+  {sv:"Trots dimman navigerade kaptenen skeppet ___ de smala sundena.",answer:"genom",opts:["genom","förbi","över","längs"],ru:"Несмотря на туман, капитан провёл корабль через проливы.",cat:"riktning",diff:3},
+  {sv:"Han slängde bollen ___ väggen i frustration.",answer:"mot",opts:["mot","på","i","till"],ru:"Он швырнул мяч в стену от злости.",cat:"riktning",diff:2,note:"kasta MOT = бросить в направлении"},
+  {sv:"Vi flög ___ Köpenhamn och tog tåget vidare.",answer:"till",opts:["till","mot","via","genom"],ru:"Мы прилетели в Копенгаген и поехали дальше.",cat:"riktning",diff:2},
+  {sv:"Barnet rullade ___ backen på sin cykel och skrattade.",answer:"nerför",opts:["nerför","uppför","genom","längs"],ru:"Ребёнок скатился с горки на велосипеде.",cat:"riktning",diff:2},
+  {sv:"Hon gick ___ korridoren med bestämda steg.",answer:"längs",opts:["längs","genom","förbi","mot"],ru:"Она шла вдоль коридора решительным шагом.",cat:"riktning",diff:3},
+  {sv:"Ambulansen körde ___ rödljuset med sirenerna på.",answer:"mot",opts:["mot","genom","förbi","över"],ru:"Скорая проехала на красный свет.",cat:"riktning",diff:3,note:"köra MOT rödljus = проехать на красный"},
+  {sv:"Flygplanet lyfte ___ landningsbanan och steg uppåt.",answer:"från",opts:["från","på","över","vid"],ru:"Самолёт оторвался от взлётной полосы.",cat:"riktning",diff:2},
+  {sv:"Hunden smet ___ grinden när vi öppnade den.",answer:"genom",opts:["genom","förbi","ur","över"],ru:"Собака проскочила через ворота.",cat:"riktning",diff:2},
+  {sv:"Vi vandrade ___ kusten i tre dagar.",answer:"längs",opts:["längs","genom","förbi","runt"],ru:"Мы шли вдоль побережья три дня.",cat:"riktning",diff:2},
+  {sv:"De paddlade ___ sjön trots de höga vågorna.",answer:"över",opts:["över","genom","längs","runt"],ru:"Они переплыли озеро несмотря на волны.",cat:"riktning",diff:2},
+  {sv:"Demonstrationståget rörde sig ___ stadens centrum.",answer:"genom",opts:["genom","förbi","runt","längs"],ru:"Колонна двигалась через центр города.",cat:"riktning",diff:2},
+  {sv:"Räven smög ___ buskarna och närmade sig hönshuset.",answer:"genom",opts:["genom","förbi","bakom","under"],ru:"Лиса прокралась сквозь кусты к курятнику.",cat:"riktning",diff:3},
+  {sv:"Vi fick bära möblerna ___ den smala trappan.",answer:"uppför",opts:["uppför","nerför","genom","längs"],ru:"Нам пришлось нести мебель вверх по узкой лестнице.",cat:"riktning",diff:2},
+  // ═══ VERB+PREP (25) ═══
+  {sv:"Hon har alltid drömt ___ att bo vid havet.",answer:"om",opts:["om","på","för","av"],ru:"Она всегда мечтала жить у моря.",cat:"verb",diff:2,note:"drömma OM = мечтать о"},
+  {sv:"Vi måste skilja ___ vad som är fakta och vad som är spekulationer.",answer:"på",opts:["på","mellan","av","om"],ru:"Мы должны различать факты и спекуляции.",cat:"verb",diff:3,note:"skilja PÅ = различать"},
+  {sv:"Trots utmaningarna vägrar hon ge ___ sin plan.",answer:"upp",opts:["upp","av","efter","om"],ru:"Несмотря на трудности, она отказывается сдаваться.",cat:"verb",diff:2,note:"ge UPP = сдаться"},
+  {sv:"De tvivlar ___ att den nya strategin fungerar.",answer:"på",opts:["på","om","i","av"],ru:"Они сомневаются, что новая стратегия сработает.",cat:"verb",diff:3,note:"tvivla PÅ = сомневаться в"},
+  {sv:"Chefen insisterade ___ att alla skulle delta.",answer:"på",opts:["på","om","för","i"],ru:"Начальник настаивал на участии всех.",cat:"verb",diff:3,note:"insistera PÅ = настаивать на"},
+  {sv:"Han ursäktade sig ___ det olämpliga beteendet.",answer:"för",opts:["för","om","av","på"],ru:"Он извинился за неуместное поведение.",cat:"verb",diff:3,note:"ursäkta sig FÖR = извиниться за"},
+  {sv:"Vi gratulerade henne ___ den välförtjänta befordran.",answer:"till",opts:["till","för","med","på"],ru:"Мы поздравили её с заслуженным повышением.",cat:"verb",diff:3,note:"gratulera TILL = поздравить с"},
+  {sv:"Allt beror ___ hur snabbt vi anpassar oss.",answer:"på",opts:["på","av","om","i"],ru:"Всё зависит от того, как быстро мы приспособимся.",cat:"verb",diff:2,note:"bero PÅ = зависеть от"},
+  {sv:"Hon har svårt att koncentrera sig ___ arbetet.",answer:"på",opts:["på","vid","om","i"],ru:"Ей трудно сосредоточиться на работе.",cat:"verb",diff:2,note:"koncentrera sig PÅ = сосредоточиться на"},
+  {sv:"Vi blev förvånade ___ hur snabbt priserna hade ökat.",answer:"över",opts:["över","av","med","på"],ru:"Мы удивились, как быстро выросли цены.",cat:"verb",diff:3,note:"förvånad ÖVER = удивлён чем-то"},
+  {sv:"De anpassade sig snabbt ___ det nya systemet.",answer:"till",opts:["till","för","med","på"],ru:"Они быстро приспособились к новой системе.",cat:"verb",diff:3,note:"anpassa sig TILL = приспособиться к"},
+  {sv:"Kunden klagade ___ kvaliteten på produkten.",answer:"på",opts:["på","om","för","över"],ru:"Клиент пожаловался на качество продукта.",cat:"verb",diff:2,note:"klaga PÅ = жаловаться на"},
+  {sv:"Jag hade inte råd ___ den resan.",answer:"med",opts:["med","för","till","på"],ru:"Я не могла позволить себе эту поездку.",cat:"verb",diff:3,note:"ha råd MED = позволить себе"},
+  {sv:"Vi påminde honom ___ att skicka in ansökan.",answer:"om",opts:["om","på","för","av"],ru:"Мы напомнили ему отправить заявку.",cat:"verb",diff:2,note:"påminna OM = напомнить о"},
+  {sv:"Förslaget ledde ___ en het debatt i styrelsen.",answer:"till",opts:["till","mot","för","i"],ru:"Предложение привело к жаркой дискуссии.",cat:"verb",diff:2,note:"leda TILL = привести к"},
+  {sv:"Han jämförde sitt resultat ___ kollegornas.",answer:"med",opts:["med","mot","till","av"],ru:"Он сравнил свой результат с результатами коллег.",cat:"verb",diff:3,note:"jämföra MED = сравнить с"},
+  {sv:"Hon skäms ___ sitt beteende igår kväll.",answer:"för",opts:["för","av","om","över"],ru:"Ей стыдно за своё поведение вчера вечером.",cat:"verb",diff:3,note:"skämmas FÖR = стыдиться"},
+  {sv:"Vi bidrog ___ organisationens arbete med en donation.",answer:"till",opts:["till","med","för","i"],ru:"Мы внесли вклад в работу организации.",cat:"verb",diff:3,note:"bidra TILL = вносить вклад в"},
+  {sv:"Resultatet tyder ___ att vår hypotes var korrekt.",answer:"på",opts:["på","om","av","till"],ru:"Результат указывает на верность нашей гипотезы.",cat:"verb",diff:3,note:"tyda PÅ = указывать на"},
+  {sv:"Hon lyckades övertyga ledningen ___ att ändra strategi.",answer:"om",opts:["om","på","för","av"],ru:"Ей удалось убедить руководство изменить стратегию.",cat:"verb",diff:3,note:"övertyga OM = убедить в"},
+  {sv:"Han kompenserade ___ sin brist på erfarenhet med entusiasm.",answer:"för",opts:["för","med","av","på"],ru:"Он компенсировал недостаток опыта энтузиазмом.",cat:"verb",diff:3,note:"kompensera FÖR = компенсировать"},
+  {sv:"Vi ser fram ___ att samarbeta med ert team.",answer:"emot",opts:["emot","mot","till","på"],ru:"Мы с нетерпением ждём сотрудничества с вами.",cat:"verb",diff:3,note:"se fram EMOT = с нетерпением ждать"},
+  {sv:"De var överens ___ att skjuta upp beslutet.",answer:"om",opts:["om","på","för","med"],ru:"Они были согласны отложить решение.",cat:"verb",diff:2,note:"vara överens OM = быть согласными"},
+  {sv:"Hon reagerade starkt ___ kritiken.",answer:"på",opts:["på","mot","för","av"],ru:"Она резко отреагировала на критику.",cat:"verb",diff:2,note:"reagera PÅ = реагировать на"},
+  {sv:"De satsade stort ___ att utveckla en ny produkt.",answer:"på",opts:["på","i","för","mot"],ru:"Они вложились в разработку нового продукта.",cat:"verb",diff:3,note:"satsa PÅ = вкладываться в"},
+];
+
+const PREP_META={plats:{label:"Место (var?)",color:"#059669",emoji:"📍"},tid:{label:"Время (när?)",color:"#2563eb",emoji:"🕐"},riktning:{label:"Направление",color:"#d97706",emoji:"➡️"},verb:{label:"Verb + prep",color:"#7c3aed",emoji:"🔗"}};
+
+function Prepositionstranare({onBack}){
+  const[screen,setScreen]=useState("start");
+  const[queue,setQueue]=useState([]);
+  const[idx,setIdx]=useState(0);
+  const[selected,setSelected]=useState(null);
+  const[show,setShow]=useState(false);
+  const[score,setScore]=useState(0);
+  const[wrong,setWrong]=useState([]);
+  const[filter,setFilter]=useState("all");
+  const[diffF,setDiffF]=useState("all");
+
+  const cnt=(c,d)=>{let p=PREPS;if(c!=="all")p=p.filter(s=>s.cat===c);if(d!=="all")p=p.filter(s=>s.diff===Number(d));return p.length;};
+  const startG=useCallback((cq)=>{let p=PREPS;if(filter!=="all")p=p.filter(s=>s.cat===filter);if(diffF!=="all")p=p.filter(s=>s.diff===Number(diffF));const q=cq||shuffle(p);if(!q.length)return;setQueue(q);setIdx(0);setScore(0);setWrong([]);setSelected(null);setShow(false);setScreen("play");},[filter,diffF]);
+  const pick=o=>{if(show)return;setSelected(o);setShow(true);if(o===queue[idx].answer)setScore(s=>s+1);else setWrong(w=>[...w,queue[idx]]);};
+  const next=()=>{if(idx+1>=queue.length){setScreen("done");return;}setIdx(i=>i+1);setSelected(null);setShow(false);};
+
+  if(screen==="start"){
+    return <div style={SS.wrap}>
+      <button style={{...SS.back,marginBottom:12}} onClick={onBack}>← Главное меню</button>
+      <h1 style={{...SS.title,color:"#1e3a5f"}}>Prepositionstränare</h1>
+      <p style={SS.sub}>100 предложений уровня B2</p>
+      <div style={{...SS.section,marginTop:16}}>
+        <p style={SS.label}>Категория:</p>
+        <div style={SS.chips}>
+          <button style={{...SS.chip,...(filter==="all"?{...SS.chipOn,borderColor:"#1e3a5f",color:"#1e3a5f"}:{})}} onClick={()=>setFilter("all")}>Все ({cnt("all",diffF)})</button>
+          {Object.entries(PREP_META).map(([k,v])=><button key={k} style={{...SS.chip,...(filter===k?{...SS.chipOn,borderColor:v.color,color:v.color}:{})}} onClick={()=>setFilter(k)}>{v.emoji} {v.label} ({cnt(k,diffF)})</button>)}
+        </div>
+      </div>
+      <div style={{...SS.section}}>
+        <p style={SS.label}>Сложность:</p>
+        <div style={SS.chips}>
+          {[["all","Все"],["2","⭐⭐"],["3","⭐⭐⭐"]].map(([k,l])=><button key={k} style={{...SS.chip,...(diffF===k?{...SS.chipOn,borderColor:"#1e3a5f",color:"#1e3a5f"}:{})}} onClick={()=>setDiffF(k)}>{l} ({cnt(filter,k)})</button>)}
+        </div>
+      </div>
+      <button style={{...SS.primary("#1e3a5f"),marginTop:16,opacity:cnt(filter,diffF)===0?0.4:1}} disabled={cnt(filter,diffF)===0} onClick={()=>startG()}>Начать ({cnt(filter,diffF)}) →</button>
+    </div>;
+  }
+
+  if(screen==="done"){
+    const pct=Math.round((score/queue.length)*100);
+    return <div style={SS.wrap}>
+      <div style={{...SS.card,marginTop:20,textAlign:"center"}}>
+        <div style={SS.doneEmoji}>{pct>=80?"🎉":pct>=50?"👍":"💪"}</div>
+        <h2 style={SS.doneTitle}>Результат</h2>
+        <p style={{textAlign:"center",fontSize:28,fontWeight:700,color:"#1e3a5f",margin:"0 0 12px"}}>{score}/{queue.length} ({pct}%)</p>
+        <div style={SS.bar}><div style={{...SS.barFill(pct>=80?"#059669":pct>=50?"#d97706":"#dc2626"),width:`${pct}%`}}/></div>
+        {wrong.length>0&&<div style={{borderTop:"1px solid #e5e7eb",paddingTop:12,marginTop:12,textAlign:"left"}}>
+          <p style={{fontSize:14,fontWeight:600,color:"#991b1b",marginBottom:8}}>Ошибки ({wrong.length}):</p>
+          {wrong.map((s,i)=>{const cm=PREP_META[s.cat];return <div key={i} style={{marginBottom:10,padding:"8px 10px",backgroundColor:"#fef2f2",borderRadius:8,fontSize:13}}>
+            <span style={SS.catBadge(cm.color)}>{cm.label}</span>
+            <p style={{margin:"4px 0 2px",fontWeight:500}}>{s.sv.replace("___",`[${s.answer}]`)}</p>
+            <p style={{margin:0,color:"#6b7280",fontSize:12}}>{s.ru}</p>
+            {s.note&&<p style={{margin:"4px 0 0",fontSize:11,color:"#7c3aed",fontStyle:"italic"}}>{s.note}</p>}
+          </div>;})}
+          <button style={{...SS.primary("#1e3a5f"),marginTop:8}} onClick={()=>startG(shuffle(wrong))}>Повторить ошибки ({wrong.length})</button>
+        </div>}
+        <button style={{...SS.secondary,marginTop:12}} onClick={()=>setScreen("start")}>В меню</button>
+      </div>
+    </div>;
+  }
+
+  const s=queue[idx];const cm=PREP_META[s.cat];const parts=s.sv.split("___");
+  return <div style={SS.wrap}>
+    <div style={SS.topBar}><button style={SS.back} onClick={()=>setScreen("start")}>← Меню</button><span style={{fontSize:13,color:"#6b7280"}}>{idx+1}/{queue.length}</span><span style={{fontSize:14,color:"#059669",fontWeight:600}}>✓ {score}</span></div>
+    <div style={SS.bar}><div style={{...SS.barFill("#1e3a5f"),width:`${((idx+1)/queue.length)*100}%`}}/></div>
+    <div style={{display:"flex",gap:6,margin:"12px 0 8px",alignItems:"center"}}><span style={SS.catBadge(cm.color)}>{cm.emoji} {cm.label}</span><span style={{fontSize:11,color:"#9ca3af"}}>{"⭐".repeat(s.diff)}</span></div>
+    <div style={{...SS.card,marginBottom:12,padding:"12px 14px"}}><p style={{margin:0,fontSize:14,color:"#374151",lineHeight:1.45}}>{s.ru}</p></div>
+    <div style={{...SS.card,marginBottom:14,padding:"14px 16px",textAlign:"center"}}>
+      <p style={{margin:0,fontSize:17,fontWeight:500,color:"#111827",lineHeight:1.5}}>
+        {parts[0]}<span style={{display:"inline-block",minWidth:60,borderBottom:show?"none":"2px dashed #6366f1",padding:"2px 6px",margin:"0 2px",fontWeight:700,color:show?(selected===s.answer?"#166534":"#991b1b"):"#4f46e5",backgroundColor:show?(selected===s.answer?"#dcfce7":"#fee2e2"):"#eef2ff",borderRadius:6}}>{show?s.answer:(selected||"?")}</span>{parts[1]}
+      </p>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+      {s.opts.map(opt=>{let bg="#fff",bd="#e5e7eb",cl="#1f2937",fw=500;if(show){if(opt===s.answer){bg="#dcfce7";bd="#86efac";cl="#166534";fw=700;}else if(opt===selected){bg="#fee2e2";bd="#fca5a5";cl="#991b1b";}else{bg="#f9fafb";cl="#9ca3af";}}
+      return <button key={opt} style={{padding:"13px 10px",border:`1.5px solid ${bd}`,borderRadius:10,backgroundColor:bg,color:cl,fontWeight:fw,fontSize:16,transition:"all 0.12s"}} onClick={()=>pick(opt)}>{opt}</button>;})}
+    </div>
+    {show&&<>{s.note&&<div style={{padding:"8px 12px",backgroundColor:"#f5f3ff",borderRadius:8,marginBottom:10}}><p style={{margin:0,fontSize:12,color:"#6b7280"}}>{s.note}</p></div>}<button style={SS.primary("#1e3a5f")} onClick={next}>{idx+1<queue.length?"Следующее →":"Результаты →"}</button></>}
+  </div>;
+}
+
+/* ══════════════════════════════════════════
+   MAIN APP — Menu
+   ══════════════════════════════════════════ */
+function App(){
+  const[active,setActive]=useState(null);
+  if(active==="ord") return <Ordtranare onBack={()=>setActive(null)}/>;
+  if(active==="mening") return <Meningsbyggare onBack={()=>setActive(null)}/>;
+  if(active==="prep") return <Prepositionstranare onBack={()=>setActive(null)}/>;
+
+  const apps=[
+    {id:"ord",title:"Ordtränare",desc:"50 слов · RU↔SV · Правописание",color:"#0c4a6e",emoji:"📚",count:"50 слов"},
+    {id:"mening",title:"Meningsbyggare",desc:"Собери предложение · V2 · Partikelverb",color:"#4c1d95",emoji:"🧩",count:"18 предложений"},
+    {id:"prep",title:"Prepositionstränare",desc:"Место · Время · Направление · Verb+prep",color:"#1e3a5f",emoji:"🎯",count:"100 предложений"},
+  ];
+
+  return <div style={{...SS.wrap,display:"flex",flexDirection:"column",justifyContent:"center",minHeight:"100vh"}}>
+    <div style={{textAlign:"center",marginBottom:28}}>
+      <h1 style={{fontSize:30,fontWeight:800,color:"#111827",margin:"0 0 4px",letterSpacing:"-1px"}}>Svenska Tränare</h1>
+      <p style={{color:"#6b7280",fontSize:14}}>Три тренажёра шведского языка</p>
+    </div>
+    <div style={{display:"flex",flexDirection:"column",gap:12}}>
+      {apps.map(a=><button key={a.id} onClick={()=>setActive(a.id)} style={{display:"flex",alignItems:"center",gap:14,padding:"18px 18px",border:"1.5px solid #e5e7eb",borderRadius:14,background:"#fff",textAlign:"left",transition:"box-shadow 0.15s",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+        <span style={{fontSize:32,width:48,textAlign:"center"}}>{a.emoji}</span>
+        <div style={{flex:1}}>
+          <p style={{margin:"0 0 2px",fontSize:17,fontWeight:600,color:a.color}}>{a.title}</p>
+          <p style={{margin:"0 0 2px",fontSize:12,color:"#6b7280"}}>{a.desc}</p>
+          <span style={{fontSize:11,color:"#9ca3af"}}>{a.count}</span>
+        </div>
+        <span style={{fontSize:18,color:"#d1d5db"}}>→</span>
+      </button>)}
+    </div>
+    <p style={{textAlign:"center",marginTop:28,fontSize:11,color:"#9ca3af"}}>Ирина · B1→B2 · Svenska på jobbet</p>
+  </div>;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
