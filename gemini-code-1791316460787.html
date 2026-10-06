@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Active Vocabulary</title>
+    <style>
+        :root {
+            --primary: #8B5CF6;
+            --primary-hover: #7C3AED;
+            --bg: #F3F4F6;
+            --card-bg: #FFFFFF;
+            --text: #1F2937;
+            --success: #10B981;
+            --error: #EF4444;
+        }
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background-color: var(--card-bg);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+        h1 { font-size: 1.5rem; margin-bottom: 20px; color: var(--primary); }
+        .menu-btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 10px;
+            background-color: var(--primary);
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .menu-btn:hover { background-color: var(--primary-hover); }
+        .hidden { display: none; }
+        
+        /* Карточки */
+        .card {
+            background-color: #EDE9FE;
+            padding: 40px 20px;
+            border-radius: 16px;
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            border: 3px solid #C4B5FD;
+            transition: transform 0.3s ease;
+        }
+        .card:active { transform: scale(0.98); }
+        .emoji { font-size: 3rem; margin-bottom: 10px; }
+
+        /* Конструктор предложений */
+        .sentence-target {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #4B5563;
+        }
+        .drop-zone {
+            min-height: 60px;
+            border: 2px dashed #C4B5FD;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            background-color: #F8FAFC;
+        }
+        .word-bank {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+        .word-chip {
+            padding: 10px 15px;
+            background-color: white;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .word-chip:hover { background-color: #EDE9FE; }
+        
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        .secondary-btn {
+            padding: 10px 20px;
+            border: none;
+            background-color: #9CA3AF;
+            color: white;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .feedback { font-weight: bold; margin-top: 15px; min-height: 24px; font-size: 1.1rem; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="main-menu">
+        <h1>Интерактивный Тренажер</h1>
+        <button class="menu-btn" onclick="startFlashcards()">📇 Учим слова (Визуальные карточки)</button>
+        <button class="menu-btn" onclick="startBuilder()">🧩 Строй предложения (Контекст)</button>
+        <button class="menu-btn" onclick="startSpelling()">⌨️ Правописание</button>
+    </div>
+
+    <!-- Режим Карточек с эмодзи -->
+    <div id="flashcard-mode" class="hidden">
+        <h1>Визуальные Карточки</h1>
+        <p style="color: #6B7280; font-size: 0.9rem;">Нажми, чтобы перевернуть</p>
+        <div id="flashcard" class="card" onclick="flipCard()">
+            <div id="fc-emoji" class="emoji"></div>
+            <div id="fc-text">Слово</div>
+        </div>
+        <div class="nav-buttons">
+            <button class="secondary-btn" onclick="goHome()">На главную</button>
+            <button class="secondary-btn" onclick="nextCard()">Следующее &rarr;</button>
+        </div>
+    </div>
+
+    <!-- Конструктор предложений -->
+    <div id="builder-mode" class="hidden">
+        <h1>Составь предложение</h1>
+        <div class="sentence-target" id="builder-ru">Русское предложение</div>
+        <div class="drop-zone" id="builder-dropzone" onclick="returnWord(event)"></div>
+        <div class="word-bank" id="builder-bank" onclick="selectWord(event)"></div>
+        <div id="builder-feedback" class="feedback"></div>
+        <div class="nav-buttons">
+            <button class="secondary-btn" onclick="goHome()">На главную</button>
+            <button class="secondary-btn" onclick="checkSentence()">Проверить</button>
+            <button class="secondary-btn" onclick="nextSentence()">Следующее &rarr;</button>
+        </div>
+    </div>
+
+    <!-- Режим Правописания (оставлен для полноты) -->
+    <div id="spelling-mode" class="hidden">
+        <h1>Правописание</h1>
+        <div id="spelling-word" class="card" style="min-height: 80px;">Русское слово</div>
+        <input type="text" id="spelling-input" placeholder="Напиши на английском..." style="width: 90%; padding: 12px; font-size: 1.1rem; border: 2px solid #D1D5DB; border-radius: 8px; margin-bottom: 10px;">
+        <button class="menu-btn" onclick="checkSpelling()">Проверить</button>
+        <div id="spelling-feedback" class="feedback"></div>
+        <div class="nav-buttons">
+            <button class="secondary-btn" onclick="goHome()">На главную</button>
+            <button class="secondary-btn" onclick="nextSpelling()">Следующее &rarr;</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Словарь с визуализациями (эмодзи)
+    const vocabulary = [
+        {en: "Suggest", ru: "предлагать", emoji: "💡"},
+        {en: "Support", ru: "поддерживать", emoji: "🤝"},
+        {en: "Suspect", ru: "подозревать", emoji: "🤨"},
+        {en: "Impact", ru: "воздействовать", emoji: "💥"},
+        {en: "Improve", ru: "улучшать", emoji: "📈"},
+        {en: "Assume", ru: "предполагать", emoji: "🤔"},
+        {en: "Guess", ru: "догадываться", emoji: "🔮"},
+        {en: "Consider", ru: "рассматривать", emoji: "🧐"},
+        {en: "Admit", ru: "признавать", emoji: "🙌"},
+        {en: "Able to", ru: "способный (что-то сделать)", emoji: "💪"},
+        {en: "Proud of", ru: "гордиться (чем-то)", emoji: "🦚"},
+        {en: "Affect", ru: "влиять", emoji: "🌊"},
+        {en: "Rely on", ru: "полагаться на", emoji: "🛡️"},
+        {en: "Freaking out", ru: "паниковать", emoji: "😱"},
+        {en: "Push through", ru: "пробиваться, преодолевать", emoji: "🧗"},
+        {en: "Regret", ru: "сожалеть", emoji: "😔"},
+        {en: "Expect", ru: "ожидать", emoji: "⏳"},
+        {en: "Allow", ru: "позволять", emoji: "✅"},
+        {en: "Advise", ru: "советовать", emoji: "🗣️"},
+        {en: "Let", ru: "позволять / разрешать", emoji: "🚪"},
+        {en: "Angry with", ru: "злиться на", emoji: "😡"},
+        {en: "Surprised by", ru: "удивлён (чем-то)", emoji: "😲"},
+        {en: "Express", ru: "выражать", emoji: "🎨"},
+        {en: "Find out", ru: "выяснить", emoji: "🔍"},
+        {en: "Solve", ru: "решать", emoji: "🧩"},
+        {en: "Depend", ru: "зависеть", emoji: "⚖️"},
+        {en: "Capable of", ru: "способный на", emoji: "🛠️"},
+        {en: "Adjust", ru: "приспосабливаться", emoji: "🦎"},
+        {en: "Hold on", ru: "держаться, не сдаваться", emoji: "✊"},
+        {en: "Carry on", ru: "продолжать", emoji: "➡️"}
+    ];
+
+    // База предложений для конструктора (используем целевые слова)
+    const sentences = [
+        {ru: "Я могу решить эту проблему.", en: "I am able to solve this problem"},
+        {ru: "Не нужно паниковать из-за этого.", en: "No need to be freaking out about this"},
+        {ru: "Мы должны продолжать работать.", en: "We must carry on working"},
+        {ru: "Я советую тебе выяснить правду.", en: "I advise you to find out the truth"},
+        {ru: "Она гордится своими результатами.", en: "She is proud of her results"},
+        {ru: "Ты можешь полагаться на мою поддержку.", en: "You can rely on my support"},
+        {ru: "Я предполагаю, что это улучшит ситуацию.", en: "I assume that it will improve the situation"},
+        {ru: "Им нужно приспособиться к новым правилами.", en: "They need to adjust to the new rules"}
+    ];
+
+    let currentList = [];
+    let currentIndex = 0;
+    let isShowingEnglish = true;
+
+    function shuffle(array) { return array.sort(() => Math.random() - 0.5); }
+    function hideAll() {
+        document.querySelectorAll('.container > div').forEach(div => div.classList.add('hidden'));
+    }
+    function goHome() {
+        hideAll();
+        document.getElementById('main-menu').classList.remove('hidden');
+    }
+
+    // --- ЛОГИКА КАРТОЧЕК ---
+    function startFlashcards() {
+        hideAll();
+        document.getElementById('flashcard-mode').classList.remove('hidden');
+        currentList = shuffle([...vocabulary]);
+        currentIndex = 0;
+        showCard();
+    }
+    function showCard() {
+        isShowingEnglish = true;
+        document.getElementById('fc-emoji').textContent = currentList[currentIndex].emoji;
+        document.getElementById('fc-text').textContent = currentList[currentIndex].en;
+        document.getElementById('flashcard').style.backgroundColor = "#EDE9FE";
+    }
+    function flipCard() {
+        isShowingEnglish = !isShowingEnglish;
+        document.getElementById('fc-text').textContent = isShowingEnglish ? currentList[currentIndex].en : currentList[currentIndex].ru;
+        document.getElementById('flashcard').style.backgroundColor = isShowingEnglish ? "#EDE9FE" : "#FEF3C7";
+    }
+    function nextCard() {
+        currentIndex = (currentIndex + 1) % currentList.length;
+        showCard();
+    }
+
+    // --- ЛОГИКА КОНСТРУКТОРА ПРЕДЛОЖЕНИЙ ---
+    let currentSentenceIndex = 0;
+    let sentenceList = [];
+    
+    function startBuilder() {
+        hideAll();
+        document.getElementById('builder-mode').classList.remove('hidden');
+        sentenceList = shuffle([...sentences]);
+        currentSentenceIndex = 0;
+        loadSentence();
+    }
+
+    function loadSentence() {
+        document.getElementById('builder-feedback').textContent = '';
+        const currentData = sentenceList[currentSentenceIndex];
+        document.getElementById('builder-ru').textContent = currentData.ru;
+        
+        const dropZone = document.getElementById('builder-dropzone');
+        const bank = document.getElementById('builder-bank');
+        dropZone.innerHTML = '';
+        bank.innerHTML = '';
+
+        // Разбиваем английское предложение на слова и перемешиваем
+        let words = currentData.en.split(' ');
+        words = shuffle(words);
+
+        words.forEach(word => {
+            const chip = document.createElement('div');
+            chip.className = 'word-chip';
+            chip.textContent = word;
+            bank.appendChild(chip);
+        });
+    }
+
+    function selectWord(e) {
+        if(e.target.classList.contains('word-chip')) {
+            document.getElementById('builder-dropzone').appendChild(e.target);
+        }
+    }
+
+    function returnWord(e) {
+        if(e.target.classList.contains('word-chip')) {
+            document.getElementById('builder-bank').appendChild(e.target);
+        }
+    }
+
+    function checkSentence() {
+        const currentData = sentenceList[currentSentenceIndex];
+        const chips = document.getElementById('builder-dropzone').children;
+        let userSentence = Array.from(chips).map(chip => chip.textContent).join(' ');
+        
+        const feedback = document.getElementById('builder-feedback');
+        if(userSentence.toLowerCase() === currentData.en.toLowerCase()) {
+            feedback.textContent = "✅ Отлично! Идеально собрано.";
+            feedback.style.color = "var(--success)";
+        } else {
+            feedback.textContent = `❌ Ошибка. Правильно: ${currentData.en}`;
+            feedback.style.color = "var(--error)";
+        }
+    }
+
+    function nextSentence() {
+        currentSentenceIndex = (currentSentenceIndex + 1) % sentenceList.length;
+        loadSentence();
+    }
+
+    // --- ЛОГИКА ПРАВОПИСАНИЯ ---
+    function startSpelling() {
+        hideAll();
+        document.getElementById('spelling-mode').classList.remove('hidden');
+        currentList = shuffle([...vocabulary]);
+        currentIndex = 0;
+        loadSpellingWord();
+    }
+    function loadSpellingWord() {
+        document.getElementById('spelling-word').innerHTML = `<div style="font-size: 2rem;">${currentList[currentIndex].emoji}</div><div>${currentList[currentIndex].ru}</div>`;
+        document.getElementById('spelling-input').value = '';
+        document.getElementById('spelling-feedback').textContent = '';
+    }
+    function checkSpelling() {
+        const input = document.getElementById('spelling-input').value.trim().toLowerCase();
+        const correctWord = currentList[currentIndex].en.toLowerCase();
+        const feedback = document.getElementById('spelling-feedback');
+        if (input === correctWord) {
+            feedback.textContent = "✅ Верно!";
+            feedback.style.color = "var(--success)";
+            setTimeout(nextSpelling, 1000);
+        } else {
+            feedback.textContent = `❌ Ошибка. Нужно: ${currentList[currentIndex].en}`;
+            feedback.style.color = "var(--error)";
+        }
+    }
+    function nextSpelling() {
+        currentIndex = (currentIndex + 1) % currentList.length;
+        loadSpellingWord();
+    }
+</script>
+
+</body>
+</html>
